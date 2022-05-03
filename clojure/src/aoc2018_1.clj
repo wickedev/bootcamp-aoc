@@ -12,8 +12,12 @@
 
 (defn parseInt [str-nums] (map  #(Integer/parseInt %) str-nums))
 
+
+;; PPAP (parse, process, aggregate, print)
+;; parse -> 알고리즘을 적용하기 전에 인풋값을 전처리하는 행위
+;; process -> 문제를 풀기위한 알고리즘을 적용하는 행위
 (->> input
-     (parseInt)
+     (map #(Integer/parseInt %))
      (reduce +))
 
 (reduce + (parseInt input))
@@ -42,21 +46,25 @@
 (first-dupulicate-number (cycle [+7, +7, -2, -7, -4]) nil (set '()))
 
 ; FIXME: Evalute 불가
-(defn first-dupulicate-number-rec-with-loop
+(defn first-dupulicate-number-with-loop
   "numbers 앞에서부터 더하여 2번 이상 동일한 결과값을 내는 첫번째 결과를 반환"
   [numbers ; 더해야 할 숫자의 목록
-   acc ; 값을 가산하기 위한 
-   prev-results ; 이전 합산 결과를 저장하기 위한
+   sum ; 값을 가산하기 위한  0
+   seen? ; 이전 합산 결과를 저장하기 위한 #{}
    ]
-  (loop [curr (first numbers)
-         rest-numbers (rest numbers)
-         result (if (nil? acc) curr (+ acc curr))]
-    (if (contains? prev-results result)
-      result
-      (recur rest-numbers result (if (nil? acc) prev-results (conj prev-results result))))))
+   (if (seen? sum)
+      sum
+      (let [sum' (+ sum (first numbers))
+            seen?' (conj seen? sum)]
+            (recur sum' seen?' (next numbers)))))
 
-(first-dupulicate-number-rec-with-loop (cycle [+1, -1]) nil (set '()))
-(first-dupulicate-number-rec-with-loop (cycle [+3, +3, +4, -2, -4]) nil (set '()))
-(first-dupulicate-number-rec-with-loop (cycle [-6, +3, +8, +5, -6]) nil (set '()))
-(first-dupulicate-number-rec-with-loop (cycle [+7, +7, -2, -7, -4]) nil (set '()))
-(first-dupulicate-number-rec-with-loop (cycle (parseInt input)) nil (set '()))
+
+(comment
+ (first-dupulicate-number-with-loop (cycle [1, -1]) 0 #{})
+;;  (first-dupulicate-number-with-loop (cycle [+3, +3, +4, -2, -4]) 0 #{})
+;;  (first-dupulicate-number-with-loop (cycle [-6, +3, +8, +5, -6]) 0 #{})
+;;  (first-dupulicate-number-with-loop (cycle [+7, +7, -2, -7, -4]) 0 #{})
+;;  (first-dupulicate-number-with-loop (cycle (parseInt input)) nil (set '()))
+)
+
+

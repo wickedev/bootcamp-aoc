@@ -20,12 +20,6 @@
 ;; ababab 3개의 a, 3개의 b 지만 한 문자열에서 같은 갯수는 한번만 카운트함 -> (두번 나오는 문자열 수: 4, 세번 나오는 문자열 수: 3)
 ;; 답 : 4 * 3 = 12
 
-;; 관용적으로 자주 사용되는 함수들에 익숙하지 않음. 빈도가 높은 함수들?
-;; 문법 에러 빈도가 높아서 속도가 잘 안나옴
-;; 파이프 중간에 함수를 커맨트 하는 방법
-;; juxt
-;; docstring 있으면 좋다
-
 (defn twice-n-triple-char-count
   "문자열 box-id를 받아 2, 3번 반복되는 문자의 카운트를 맵으로 반환 (ex {2 1, 3 1} 2번 1개 3번 1개)"
   [box-id; 박스에 적혀진 문자열
@@ -65,51 +59,64 @@
 
 (comment (checksum input))
 
-;; (defn count-duplicate
-;;   "((3 2 1) (1 2) (1 3) (2 1) (1 2) (3))
-;;    #{2 3}"
-;;   [count-seq times]
-;;   (->> count-seq
-;;        (map (fn [x]
-;;               (println x)
-;;               (filter (select [2 3])   x)))))
+;; #################################
+;; ###        Refactoring        ###
+;; #################################
+
+;; ## Deprecated ##
+;; (defn select
+;;   [counts] (fn [x]
+;;              (->> counts
+;;                   (reduce
+;;                    (fn
+;;                      [prev-cond count]
+;;                      (or prev-cond (some #(= count %) x)))
+;;                    false))))
 
 ;; (comment
-;;   (count-duplicate '('(3 2 1) '(1 2) '(1 3) '(2 1) '(1 2) '(3))  #{2 3}))
-
-;; WIP
+;;   (->> [1 3 2 1 1 2 1 3 2 1 1 2 3]
+;;        (filter (select #{2 3}))))
 
 (defn counts-in-word
-  [box-id]
+  "문자열 box-id를 받아 반복되는 문자의 카운트를 리스트로 반환 (ex -> (1 2))"
+  [box-id; 박스에 적혀진 문자열
+   ]
   (->> box-id
        frequencies
        (group-by val)
        keys))
 
-(defn select [keyseq] (fn [x]
-                        (->> keyseq
-                             (reduce
-                              (fn
-                                [acc v]
-                                (or acc (some #(= v %) x)))
-                              false))))
-
-(defn pick [keyseq] (fn [coll] (->> coll
-                                    (filter (select keyseq)))))
+(defn checksum-v2
+  "box-ids를 입력으로 받아 정수 체크섬을 반환"
+  [box-ids ; 박스에 적혀진 문자열의 콜렉션
+   counts-to-check ; 체크해야할 카운트 시퀀스 (ex #{2 3})
+   ]
+  (->> box-ids
+       (map counts-in-word) ; ((1) (3 2 1) (1 2) (1 3) (2 1) (1 2) (3))
+       (apply concat) ; (1 3 2 1 1 2 1 3 2 1 1 2 3)
+       (filter (comp counts-to-check)) ; (3 2 2 3 2 2 3)
+       frequencies ; {3 3, 2 4}
+       vals ; (3 4)
+       (apply *) ; 12
+       ))
 
 (comment
-  (->> ["abcdef"
-        "bababc"
-        "abbcde"
-        "abcccd"
-        "aabcdd"
-        "abcdee"
-        "ababab"]
-       (map counts-in-word) ; ((1) (3 2 1) (1 2) (1 3) (2 1) (1 2) (3))
-       #_(filter (select #{3}))
-       (map (pick #{2 3}))  ; (() (3 2) (2) (3) (2) (2) (3))
-       (filter not-empty) ; ((3 2) (2) (3) (2) (2) (3))
-       (flatten)))
+  (def sample-data ["abcdef"
+                    "bababc"
+                    "abbcde"
+                    "abcccd"
+                    "aabcdd"
+                    "abcdee"
+                    "ababab"])
+  (checksum-v2 sample-data #{2 3})
+  (checksum-v2 sample-data #{1})
+  (checksum-v2 sample-data #{2})
+  (checksum-v2 sample-data #{3}))
+
+(comment
+  (checksum-v2 input #{2 3})
+  (checksum-v2 input #{1 3})
+  (checksum-v2 input #{1 2}))
 
 ;; 파트 2
 ;; 여러개의 문자열 중, 같은 위치에 정확히 하나의 문자가 다른 문자열 쌍에서 같은 부분만을 리턴하시오.

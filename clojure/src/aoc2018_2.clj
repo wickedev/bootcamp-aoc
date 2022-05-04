@@ -94,6 +94,9 @@
                                 (or acc (some #(= v %) x)))
                               false))))
 
+(defn pick [keyseq] (fn [coll] (->> coll
+                                    (filter (select keyseq)))))
+
 (comment
   (->> ["abcdef"
         "bababc"
@@ -102,8 +105,11 @@
         "aabcdd"
         "abcdee"
         "ababab"]
-       (map counts-in-word)
-       (filter (select #{2 3}))))
+       (map counts-in-word) ; ((1) (3 2 1) (1 2) (1 3) (2 1) (1 2) (3))
+       #_(filter (select #{3}))
+       (map (pick #{2 3}))  ; (() (3 2) (2) (3) (2) (2) (3))
+       (filter not-empty) ; ((3 2) (2) (3) (2) (2) (3))
+       (flatten)))
 
 ;; 파트 2
 ;; 여러개의 문자열 중, 같은 위치에 정확히 하나의 문자가 다른 문자열 쌍에서 같은 부분만을 리턴하시오.

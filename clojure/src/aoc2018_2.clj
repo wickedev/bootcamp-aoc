@@ -94,7 +94,7 @@
   (->> box-ids
        (map counts-in-word) ; ((1) (3 2 1) (1 2) (1 3) (2 1) (1 2) (3))
        (apply concat) ; (1 3 2 1 1 2 1 3 2 1 1 2 3)
-       (filter (comp counts-to-check)) ; (3 2 2 3 2 2 3)
+       (filter counts-to-check) ; (3 2 2 3 2 2 3)
        frequencies ; {3 3, 2 4}
        vals ; (3 4)
        (apply *) ; 12

@@ -1,6 +1,7 @@
 (ns aoc2018-2
   (:require [clojure.java.io :as io]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clojure.tools.trace :as trace :refer (trace)]))
 
 (def input (-> "day2.sample.txt"
                (io/resource)
@@ -131,6 +132,83 @@
 
 ;; 주어진 예시에서 fguij와 fghij는 같은 위치 (2번째 인덱스)에 정확히 한 문자 (u와 h)가 다름. 따라서 같은 부분인 fgij를 리턴하면 됨.
 
+(defn str->list
+  "문자열을 문자 리스트로 변환합니다." [s] (str/split s #""))
+
+(defn zip
+  "순차적으로 두 컬렉션을 묶습니다."
+  [coll1 coll2] (map vector coll1 coll2))
+
+(defn intersection
+  "문자열 s1 s2 간에 공통 문자열을 반환합니다."
+  [s1 s2]
+  (let [s1' (str->list s1)
+        s2' (str->list s2)
+        coll (zip s1' s2')]
+    (->> coll
+         (map (fn [pair]
+                (when (apply = pair)
+                  (first pair))))
+         (filter some?)
+         (apply str))))
+
+(comment (intersection "abc" "acc")) ; "ac"
+
+(defn common-letter-for-box-id
+  "box-id를 기준으로 box-ids 안에서 공통 문자를 반환합니다. 공통 문자가 없다면 nil을 반환합니다."
+  [box-id; 박스 ID
+   box-ids; 박스 ID들
+   tolerance ; 허용치; 예) 0이라면 완전 일치, 1이라면 하나 만큼 다른 것을 허용
+   ]
+  (let [curr (first box-ids)
+        common-letters (intersection box-id curr)
+        matched? (= (count common-letters) (- (count box-id) tolerance))]
+    #_(println :common-letter-for-box-id :box-id box-id :box-ids box-ids :next-box-id curr :common common-letters)
+    (cond
+      matched? common-letters
+      (nil? (next box-ids)) nil
+      :else (recur box-id (rest box-ids) tolerance))))
+
+(comment
+  (common-letter-for-box-id "fghij" ["klmno"
+                                     "pqrst"
+                                     "axcye"
+                                     "wvxyz"
+                                     "fguij"] 1) ; "fgij"
+  (common-letter-for-box-id "fghij" ["klmno"
+                                     "pqrst"
+                                     "axcye"
+                                     "wvxyz"] 1) ; nil
+  )
+
+(defn common-letter-between-box-ids
+  "box-ids 간에 첫번째 공통 문자열를 반환합니다. 공통 문자가 없다면 nil을 반환합니다."
+  [box-ids; 박스 ID들
+   tolerance ; 허용치; 예) 0이라면 완전 일치, 1이라면 하나 만큼 다른 것을 허용
+   ]
+  (let [curr (first box-ids)
+        common-letters (common-letter-for-box-id curr (rest box-ids) tolerance)]
+    #_(println :common-letter-between-box-ids :curr curr :common common-letters)
+    (cond
+      (nil? common-letters) (recur (rest box-ids) tolerance)
+      :else common-letters)))
+
+(comment
+  (common-letter-between-box-ids  ["abcde"
+                                   "fghij"
+                                   "klmno"
+                                   "pqrst"
+                                   "fguij"
+                                   "axcye"
+                                   "wvxyz"] 1) ; "fgij"
+  (common-letter-between-box-ids input 1) ; "vtnikorkulbfejvyznqgdxpaw"
+  )
+
+;; # 한타 2022.05.06
+;; 
+;; 1. 스레딩 매크로 상에서는 trace를 사용해 디버깅, recur에서 trace를 쉽게 하는 방법이 있을까요?
+;;     - ex. 디버거, IDEA 라이브 템플릿
+;; 2. 현재 재귀로 풀었지만 2중 반복의 경우 함수 체이닝으로도 풀 수 있는 방법이 있을까요?
 
 ;; #################################
 ;; ###        Refactoring        ###

@@ -158,7 +158,7 @@
   "box-id를 기준으로 box-ids 안에서 공통 문자를 반환합니다. 공통 문자가 없다면 nil을 반환합니다."
   [box-id; 박스 ID
    box-ids; 박스 ID들
-   tolerance ; 허용치; 예) 0이라면 완전 일치, 1이라면 하나 만큼 다른 것을 허용
+   tolerance ; 허용치; 예를들어 0이라면 완전 일치, 1이라면 하나 만큼 다른 것을 허용
    ]
   (let [curr (first box-ids)
         common-letters (intersection box-id curr)
@@ -187,10 +187,12 @@
    tolerance ; 허용치; 예) 0이라면 완전 일치, 1이라면 하나 만큼 다른 것을 허용
    ]
   (let [curr (first box-ids)
-        common-letters (common-letter-for-box-id curr (rest box-ids) tolerance)]
-    #_(println :common-letter-between-box-ids :curr curr :common common-letters)
+        rest-box-ids (rest box-ids)
+        common-letters (common-letter-for-box-id curr rest-box-ids tolerance)]
+    #_(println :common-letter-between-box-ids :curr curr :next-box-id rest-box-ids :common common-letters)
     (cond
-      (nil? common-letters) (recur (rest box-ids) tolerance)
+      (nil? (next rest-box-ids)) nil
+      (nil? common-letters) (recur rest-box-ids tolerance)
       :else common-letters)))
 
 (comment
@@ -201,14 +203,20 @@
                                    "fguij"
                                    "axcye"
                                    "wvxyz"] 1) ; "fgij"
+  (common-letter-between-box-ids  ["klmno"
+                                   "pqrst"
+                                   "axcye"
+                                   "wvxyz"] 1) ; "fgij"
   (common-letter-between-box-ids input 1) ; "vtnikorkulbfejvyznqgdxpaw"
   )
 
 ;; # 한타 2022.05.06
-;; 
+;; todo
 ;; 1. 스레딩 매크로 상에서는 trace를 사용해 디버깅, recur에서 trace를 쉽게 하는 방법이 있을까요?
 ;;     - ex. 디버거, IDEA 라이브 템플릿
+;;     - A. tap을 사용해 볼 것
 ;; 2. 현재 재귀로 풀었지만 2중 반복의 경우 함수 체이닝으로도 풀 수 있는 방법이 있을까요?
+;;     - https://github.com/clojure/math.combinatorics
 
 ;; #################################
 ;; ###        Refactoring        ###

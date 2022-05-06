@@ -32,28 +32,33 @@
 
 (def input-pattern #"#(\d+)\s@\s(\d+),(\d+):\s(\d+)x(\d+)")
 
-(defn parse-input [s] (-> (->> s
-                               (re-find input-pattern)
-                               rest
-                               (zipmap [:ids :x :y :w :h]))
-                          (update :ids #(str/split % #""))
-                          (update :x read-string)
-                          (update :y read-string)
-                          (update :w read-string)
-                          (update :h read-string)))
+(defn parse-input
+  "#1 @ 1,3: 4x4 패턴의 옵션을 파싱"
+  [s] (-> (->> s
+               (re-find input-pattern)
+               rest
+               (zipmap [:ids :x :y :w :h]))
+          (update :ids #(str/split % #""))
+          (update :x read-string)
+          (update :y read-string)
+          (update :w read-string)
+          (update :h read-string)))
 
 (comment
   (parse-input "#1 @ 1,3: 4x4") ; {:ids ["1"], :x 1, :y 3, :w 4, :h 4} 
   (parse-input "#11 @ 11,33: 44x44") ; {:id 11, :x 11, :y 33, :width 44, :height 44}
   )
 
-(defn repeatedly-indexed [w f]
-  (map-indexed (fn [i _] (f i)) (range w)))
+(defn repeatedly-indexed
+  "repeatedly의 indexed 버전"
+  [end f]
+  (map-indexed (fn [i _] (f i)) (range end)))
 
 (comment
   (repeatedly-indexed 3 (fn [y] (repeatedly-indexed 3 (fn [x] [x y])))))
 
 (defn make-fabric
+  "id에 해당하는 패브릭을 만듭니다."
   [{id :id x :x y :y w :w h :h}]
   (let [width (+ x w)
         height (+ y h)]
@@ -71,11 +76,13 @@
             :else \')))))))
 
 (defn make-fabrics
+  "{ids :ids x :x y :y w :w h :h} 형식의 옵션들을 입력으로 받아 패브릭을 만듭니다."
   [options]
   (->> options
        (map (fn [{ids :ids x :x y :y w :w h :h}]
               (->> ids
-                   (map #(make-fabric {:id % :x x :y y :w w :h h})))))))
+                   (map #(make-fabric {:id % :x x :y y :w w :h h})))))
+       (apply concat)))
 
 (comment
   (make-fabric {:id "1" :x 1 :y 3 :w 4 :h 4}))
@@ -84,16 +91,12 @@
   "순차적으로 두 컬렉션을 묶습니다."
   [coll1 coll2] (map vector coll1 coll2))
 
-(defn zip-fabric [fabric1 fabric2] fabric1)
-
 (comment
   (->> ["#1 @ 1,3: 4x4"
         "#2 @ 3,1: 4x4"
         "#3 @ 5,5: 2x2"]
        (map parse-input)
        make-fabrics))
-
-
 
 ;; 파트 2
 ;; 입력대로 모든 격자를 채우고 나면, 정확히 한 ID에 해당하는 영역이 다른 어떤 영역과도 겹치지 않음

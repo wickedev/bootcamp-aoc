@@ -1,12 +1,9 @@
 (ns aoc2018_3
-  (:require [clojure.java.io :as io]
-            [clojure.string :as str]
-            [clojure.tools.trace :as trace :refer (trace)]))
+  (:require [clojure.set :as set :refer (difference)]
+            [utils :refer [read-resource]]))
 
-(def input (-> "day3.sample2.txt"
-               (io/resource)
-               (slurp)
-               (str/split-lines)))
+(def input (read-resource "aoc2018_3_sample.txt"))
+
 
 ;; 파트 1
 ;; 다음과 같은 입력이 주어짐.
@@ -30,124 +27,101 @@
 ;; 여기서 XX는 ID 1, 2, 3의 영역이 두번 이상 겹치는 지역.
 ;; 겹치는 지역의 갯수를 출력하시오. (위의 예시에서는 4)
 
-(def input-pattern #"#(\d+)\s@\s(\d+),(\d+):\s(\d+)x(\d+)")
+(def claim-pattern #"#(\d+)\s@\s(\d+),(\d+):\s(\d+)x(\d+)")
 
-(defn parse-input
-  "#1 @ 1,3: 4x4 패턴의 옵션을 파싱"
-  [s] (-> (->> s
-               (re-find input-pattern)
-               rest
-               (zipmap [:ids :x :y :w :h]))
-          (update :ids #(str/split % #""))
-          (update :x read-string)
-          (update :y read-string)
-          (update :w read-string)
-          (update :h read-string)))
+(defn parse-claim
+  "#1 @ 1,3: 4x4 형식의 claim을 파싱"
+  [input]
+  (->> input
+       (re-find claim-pattern)
+       rest
+       (map read-string)
+       (zipmap [:id :x :y :w :h])))
 
-(comment
-  (parse-input "#1 @ 1,3: 4x4") ; {:ids ["1"], :x 1, :y 3, :w 4, :h 4} 
-  (parse-input "#11 @ 11,33: 44x44") ; {:id 11, :x 11, :y 33, :width 44, :height 44}
-  )
-
-(defn repeatedly-indexed
-  "repeatedly의 indexed 버전"
-  [end f]
-  (map-indexed (fn [i _] (f i)) (range end)))
-
-(comment
-  (repeatedly-indexed 3 (fn [y] (repeatedly-indexed 3 (fn [x] [x y])))))
+(defn parse-claims [claims] (map parse-claim claims))
 
 (defn make-fabric
-  "id에 해당하는 패브릭을 만듭니다."
-  [{id :id x :x y :y w :w h :h}]
+  "claim으로 부터 fabric을 만듭니다."
+  [{:keys [id x y w h]}]
   (let [width (+ x w)
         height (+ y h)]
-    (repeatedly-indexed
-     height
-     (fn [y']
-       (repeatedly-indexed
-        width
-        (fn [x']
-          (cond
-            (and (<= x x')
-                 (<= y y')
-                 (<= x' width)
-                 (<= y' height)) id
-            :else \')))))))
-
-(comment
-  (make-fabric {:id "1" :x 1 :y 3 :w 4 :h 4}))
-;; ((\' \' \' \' \')
-;;  (\' \' \' \' \')
-;;  (\' \' \' \' \')
-;;  (\' "1" "1" "1" "1")
-;;  (\' "1" "1" "1" "1")
-;;  (\' "1" "1" "1" "1")
-;;  (\' "1" "1" "1" "1"))
+    (for [x (range x width), y (range y height)]
+      {:id id :x x :y y})))
 
 (defn make-fabrics
-  "{ids :ids x :x y :y w :w h :h} 형식의 옵션들을 입력으로 받아 패브릭을 만듭니다."
-  [options]
-  (->> options
-       (map (fn [{ids :ids x :x y :y w :w h :h}]
-              (->> ids
-                   (map #(make-fabric {:id % :x x :y y :w w :h h})))))
-       (apply concat)))
+  "claim들로 부터 fabric들을 만듭니다."
+  [claims]
+  (map make-fabric claims))
+
+
+(defn collapse-tiles
+  "좌표 중복 없이 연관된 id 리스트를 함께 반환합니다. ex) {:x 3, :y 3} (1 2)"
+  [tiles]
+  (reduce (fn [s x]
+            (let [id (get x :id)
+                  xy (select-keys x [:x :y])
+                  ids (get s xy '())]
+              (assoc s xy (conj ids id))))
+          {} tiles))
+
+(defn overlap?
+  "ids 카운트가 1 이상이면 겹쳐있다 판단하여 참을 반환"
+  [[_ ids]] (< 1 (count ids)))
+
+(defn collapse-fabrics
+  "좌표 중복 없이 연관된 id 리스트를 함께 반환합니다. ex) {:x 3, :y 3} (1 2)"
+  [fabrics]
+  (->> fabrics
+       (reduce into)
+       collapse-tiles))
+
+(defn solve-3-1
+  [inputs]
+  (->> inputs
+       parse-claims
+       make-fabrics
+       collapse-fabrics
+       (filter overlap?)
+       count))
 
 (comment
-  (->> ["#1 @ 1,3: 4x4"
-        "#2 @ 3,1: 4x4"
-        "#3 @ 5,5: 2x2"]
-       (map parse-input)
-       make-fabrics))
-;; (((\' \' \' \' \')
-;;   (\' \' \' \' \')
-;;   (\' \' \' \' \')
-;;   (\' "1" "1" "1" "1")
-;;   (\' "1" "1" "1" "1")
-;;   (\' "1" "1" "1" "1")
-;;   (\' "1" "1" "1" "1"))
-;;  ((\' \' \' \' \' \' \')
-;;   (\' \' \' "2" "2" "2" "2")
-;;   (\' \' \' "2" "2" "2" "2")
-;;   (\' \' \' "2" "2" "2" "2")
-;;   (\' \' \' "2" "2" "2" "2"))
-;;  ((\' \' \' \' \' \' \')
-;;   (\' \' \' \' \' \' \')
-;;   (\' \' \' \' \' \' \')
-;;   (\' \' \' \' \' \' \')
-;;   (\' \' \' \' \' \' \')
-;;   (\' \' \' \' \' "3" "3")
-;;   (\' \' \' \' \' "3" "3")))
-
-
-
-(defn zip
-  "순차적으로 두 컬렉션을 묶습니다."
-  [coll1 coll2] (map vector coll1 coll2))
-
-(defn zip-2d-array
-  "2차원 배열을 묶습니다."
-  [coll1 coll2]
-  (zip coll1 coll2)
-  (map (fn [x] (zip (first x)(last x)))))
-
-(comment
-  (zip-2d-array '((\' \' \' \' \')
-                  (\' \' \' \' \')
-                  (\' \' \' \' \')
-                  (\' "1" "1" "1" "1")
-                  (\' "1" "1" "1" "1")
-                  (\' "1" "1" "1" "1")
-                  (\' "1" "1" "1" "1"))
-
-                '((\' \' \' \' \' \' \')
-                  (\' \' \' "2" "2" "2" "2")
-                  (\' \' \' "2" "2" "2" "2")
-                  (\' \' \' "2" "2" "2" "2")
-                  (\' \' \' "2" "2" "2" "2"))))
+  (solve-3-1 ["#1 @ 1,3: 4x4"
+              "#2 @ 3,1: 4x4"
+              "#3 @ 5,5: 2x2"])
+  (solve-3-1 input))
 
 ;; 파트 2
 ;; 입력대로 모든 격자를 채우고 나면, 정확히 한 ID에 해당하는 영역이 다른 어떤 영역과도 겹치지 않음
 ;; 위의 예시에서는 ID 3 이 ID 1, 2와 겹치지 않음. 3을 출력.
 ;; 겹치지 않는 영역을 가진 ID를 출력하시오. (문제에서 답이 하나만 나옴을 보장함)
+
+(defn ids-from
+  "claim들의 id들을 반환"
+  [claims]
+  (->> claims
+       (map #(get % :id))
+       set))
+
+(defn overlaped-ids-from
+  "fabirc들에서 겹쳐지는 id들을 반환"
+  [fabrics]
+  (->> fabrics
+       collapse-fabrics
+       (filter overlap?)
+       (map (fn [[_ ids]] ids))
+       (apply concat)
+       set))
+
+(defn solve-3-2
+  [inputs]
+  (let [claims (parse-claims inputs)
+        fabrics (make-fabrics claims)
+        ids (ids-from claims)
+        overlap-ids (overlaped-ids-from fabrics)]
+    (first (difference ids overlap-ids))))
+
+(comment
+  (solve-3-2 ["#1 @ 1,3: 4x4"
+              "#2 @ 3,1: 4x4"
+              "#3 @ 5,5: 2x2"])
+  (solve-3-2 input))

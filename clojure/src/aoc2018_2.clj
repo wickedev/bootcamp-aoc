@@ -1,12 +1,7 @@
 (ns aoc2018-2
-  (:require [clojure.java.io :as io]
-            [clojure.string :as str]
-            [clojure.tools.trace :as trace :refer (trace)]))
+  (:require [utils :refer [read-resource]]))
 
-(def input (-> "day2.sample.txt"
-               (io/resource)
-               (slurp)
-               (str/split-lines)))
+(def input (read-resource "day2.sample.txt"))
 
 ;; 파트 1
 ;; 주어진 각각의 문자열에서, 같은 문자가 두번 혹은 세번씩 나타난다면 각각을 한번씩 센다.
@@ -132,9 +127,6 @@
 
 ;; 주어진 예시에서 fguij와 fghij는 같은 위치 (2번째 인덱스)에 정확히 한 문자 (u와 h)가 다름. 따라서 같은 부분인 fgij를 리턴하면 됨.
 
-(defn str->list
-  "문자열을 문자 리스트로 변환합니다." [s] (str/split s #""))
-
 (defn zip
   "순차적으로 두 컬렉션을 묶습니다."
   [coll1 coll2] (map vector coll1 coll2))
@@ -142,13 +134,11 @@
 (defn intersection
   "문자열 s1 s2 간에 공통 문자열을 반환합니다."
   [s1 s2]
-  (let [s1' (str->list s1)
-        s2' (str->list s2)
-        coll (zip s1' s2')]
+  (let [coll (zip s1 s2)]
     (->> coll
-         (map (fn [pair]
-                (when (apply = pair)
-                  (first pair))))
+         (map (fn [[a b]]
+                (when (= a b)
+                  a)))
          (filter some?)
          (apply str))))
 
@@ -166,8 +156,8 @@
     #_(println :common-letter-for-box-id :box-id box-id :box-ids box-ids :next-box-id curr :common common-letters)
     (cond
       matched? common-letters
-      (nil? (next box-ids)) nil
-      :else (recur box-id (rest box-ids) tolerance))))
+      (seq (rest box-ids)) (recur box-id (rest box-ids) tolerance)
+      :else nil)))
 
 (comment
   (common-letter-for-box-id "fghij" ["klmno"
@@ -180,6 +170,8 @@
                                      "axcye"
                                      "wvxyz"] 1) ; nil
   )
+
+(println "h")
 
 (defn common-letter-between-box-ids
   "box-ids 간에 첫번째 공통 문자열를 반환합니다. 공통 문자가 없다면 nil을 반환합니다."
@@ -206,7 +198,7 @@
   (common-letter-between-box-ids  ["klmno"
                                    "pqrst"
                                    "axcye"
-                                   "wvxyz"] 1) ; "fgij"
+                                   "wvxyz"] 1) ; nil
   (common-letter-between-box-ids input 1) ; "vtnikorkulbfejvyznqgdxpaw"
   )
 

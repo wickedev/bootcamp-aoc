@@ -180,11 +180,11 @@
       ;;   {:id 99, :timelines (798894842 798894876 798894886 798896283 798896325 798896335)})
        (map (fn [{id :id, timelines :timelines}]
               (let [diffs (calc-diff-minutes id timelines '())]
-                {:id id, :diffs (diffs->wake-and-sleep diffs)})))))
-      ;; ({:id 10, :diffs {:wakes 45, :sleeps 10}}
-      ;;  {:id 99, :diffs {:wakes 10, :sleeps 42}}
-      ;;  {:id 10, :diffs {:wakes 5, :sleeps 19}}
-      ;;  {:id 99, :diffs {:wakes 1441, :sleeps 52}})
+                {:id id, :wakes-and-sleeps (diffs->wake-and-sleep diffs)})))))
+      ;; ({:id 10, :wakes-and-sleeps {:wakes 45, :sleeps 10}}
+      ;;  {:id 99, :wakes-and-sleeps {:wakes 10, :sleeps 42}}
+      ;;  {:id 10, :wakes-and-sleeps {:wakes 5, :sleeps 19}}
+      ;;  {:id 99, :wakes-and-sleeps {:wakes 1441, :sleeps 52}})
 
 ;; diffs 를 인덱스로 분할하려고 함
 

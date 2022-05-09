@@ -112,12 +112,17 @@
   (calc-diff-minutes  10 '(798890520 798890525 798890545 798890550 798890575) '()))
 
 
-(defn diffs->wake-and-sleep [diffs]
-  (->> diffs
-       (map-indexed vector)
-       (group-by (fn [x] (odd? (first x))))
-       vals
-       #_(map (fn [[idx v]] {:idx idx :value v}))))
+(defn diffs->wake-and-sleep
+  "diffs 사이의 갭을 짝수 인덱스는 wakes로 홀수는 sleeps로 합산하여 반환"
+  [diffs]
+  (let [spitted-diffs (->> diffs
+                           (map-indexed vector)
+                           (group-by (fn [x] (odd? (first x))))
+                           vals
+                           (map (fn [x] (map last x))))
+        wakes (first spitted-diffs)
+        sleeps (last spitted-diffs)]
+    {:wakes (apply + wakes) :sleeps (apply + sleeps)}))
 
 ;;; WIP
 (defn solve-4-1 [inputs]
@@ -176,10 +181,10 @@
        (map (fn [{id :id, timelines :timelines}]
               (let [diffs (calc-diff-minutes id timelines '())]
                 {:id id, :diffs (diffs->wake-and-sleep diffs)})))))
-      ;; ({:id 10, :diffs ([[0 25] [2 20]] [[1 5] [3 5]])}
-      ;;  {:id 99, :diffs ([[0 10]] [[1 42]])}
-      ;;  {:id 10, :diffs ([[0 5]] [[1 19]])}
-      ;;  {:id 99, :diffs ([[0 10] [2 1397] [4 34]] [[1 42] [3 10]])})
+      ;; ({:id 10, :diffs {:wakes 45, :sleeps 10}}
+      ;;  {:id 99, :diffs {:wakes 10, :sleeps 42}}
+      ;;  {:id 10, :diffs {:wakes 5, :sleeps 19}}
+      ;;  {:id 99, :diffs {:wakes 1441, :sleeps 52}})
 
 ;; diffs 를 인덱스로 분할하려고 함
 

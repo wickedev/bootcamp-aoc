@@ -86,9 +86,11 @@
                :sleep (+ sleep' sleep)})) records))
 
 (defn sleep-sumaries
-
-  [records]
-  (->> records
+  "raw-records ({:minute 0, :shift? true, :guard 10} {:guard 10, :hour nil, :minute 5, :shift? false})
+   형식의 데이터를 ({:guard 10, :minutes (0 5 25), :sleep-ranges ((5 25)), :sleep 20} ...)
+   형식으로 요약"
+  [raw-records]
+  (->> raw-records
        filling-guards
        (partition-by :guard)
        (map aggregate-records)
@@ -126,6 +128,7 @@
         sleep-ranges (:sleep-ranges sleepiest-guard)
         sleepiest-guard-id (:guard sleepiest-guard)
         sleepiest-minute (first (sleepiest-minute-in sleep-ranges))]
+    (println sumaries)
     (* sleepiest-guard-id sleepiest-minute)))
 
 (comment

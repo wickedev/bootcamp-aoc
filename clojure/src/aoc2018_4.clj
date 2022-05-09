@@ -51,7 +51,7 @@
   "Guard #id begins shift 형식 로그에서 id를 파싱"
   [log]
   (let [matched (last (re-find guard-shift-pattern log))]
-    (if (seq matched) (read-string matched) nil)))
+    (when (seq matched) (read-string matched))))
 
 (comment
   (parse-id "Guard #10 begins shift")
@@ -77,8 +77,9 @@
           [] records))
 
 (defn collapse-timelines
+  "id를 기준으로 하나의 맵으로 병합하고 :timeline 에 :timestamp를 모아 리스트로 반환 {:id 1 :timestap: ({...})}"
   [timeline]
-  (let [timelines' (map (fn [x] (:timestamp x)) timeline)]
+  (let [timelines' (map :timestamp timeline)]
     (reduce (fn [_ x]
               {:id (:id x) :timelines timelines'})
             {}
@@ -96,7 +97,7 @@
 (comment
   (datetime->minute {:year 1518, :month 11, :day 1, :hour 0, :minute 0}))
 
-(defn calc-wake-and-sleep
+(defn calc-diff-minutes
   "timelines 간에 diff 시간을 리스트로 반환"
   [id timelines diff]
   (let [curr (first timelines)
@@ -108,8 +109,15 @@
 
 (comment
   ;; 각 시간의 차이 만큼 출력 (25 5 20 5)
-  (calc-wake-and-sleep  10 '(798890520 798890525 798890545 798890550 798890575) '()))
+  (calc-diff-minutes  10 '(798890520 798890525 798890545 798890550 798890575) '()))
 
+
+(defn diffs->wake-and-sleep [diffs]
+  (->> diffs
+       (map-indexed vector)
+       (group-by (fn [x] (odd? (first x))))
+       vals
+       #_(map (fn [[idx v]] {:idx idx :value v}))))
 
 ;;; WIP
 (defn solve-4-1 [inputs]
@@ -117,13 +125,63 @@
        (map parse-record)
        collapse-records
        (partition-by :id)
+      ;;  (({:id 10, :timestamp {:year 1518, :month 11, :day 1, :hour 0, :minute 0}}
+      ;;    {:id 10, :timestamp {:year 1518, :month 11, :day 1, :hour 0, :minute 5}}
+      ;;    {:id 10, :timestamp {:year 1518, :month 11, :day 1, :hour 0, :minute 25}}
+      ;;    {:id 10, :timestamp {:year 1518, :month 11, :day 1, :hour 0, :minute 30}}
+      ;;    {:id 10, :timestamp {:year 1518, :month 11, :day 1, :hour 0, :minute 55}})
+      ;;   ({:id 99, :timestamp {:year 1518, :month 11, :day 1, :hour 23, :minute 58}}
+      ;;    {:id 99, :timestamp {:year 1518, :month 11, :day 2, :hour 0, :minute 40}}
+      ;;    {:id 99, :timestamp {:year 1518, :month 11, :day 2, :hour 0, :minute 50}})
+      ;;   ({:id 10, :timestamp {:year 1518, :month 11, :day 3, :hour 0, :minute 5}}
+      ;;    {:id 10, :timestamp {:year 1518, :month 11, :day 3, :hour 0, :minute 24}}
+      ;;    {:id 10, :timestamp {:year 1518, :month 11, :day 3, :hour 0, :minute 29}})
+      ;;   ({:id 99, :timestamp {:year 1518, :month 11, :day 4, :hour 0, :minute 2}}
+      ;;    {:id 99, :timestamp {:year 1518, :month 11, :day 4, :hour 0, :minute 36}}
+      ;;    {:id 99, :timestamp {:year 1518, :month 11, :day 4, :hour 0, :minute 46}}
+      ;;    {:id 99, :timestamp {:year 1518, :month 11, :day 5, :hour 0, :minute 3}}
+      ;;    {:id 99, :timestamp {:year 1518, :month 11, :day 5, :hour 0, :minute 45}}
+      ;;    {:id 99, :timestamp {:year 1518, :month 11, :day 5, :hour 0, :minute 55}}))
        (map collapse-timelines)
-       (map (fn [x]
-              (let [id (:id x)
-                    timelines (map datetime->minute (:timelines x))]
-                {:id id :timelines timelines})))
+      ;;  ({:id 10,
+      ;;    :timelines
+      ;;    ({:year 1518, :month 11, :day 1, :hour 0, :minute 0}
+      ;;     {:year 1518, :month 11, :day 1, :hour 0, :minute 5}
+      ;;     {:year 1518, :month 11, :day 1, :hour 0, :minute 25}
+      ;;     {:year 1518, :month 11, :day 1, :hour 0, :minute 30}
+      ;;     {:year 1518, :month 11, :day 1, :hour 0, :minute 55})}
+      ;;   {:id 99,
+      ;;    :timelines
+      ;;    ({:year 1518, :month 11, :day 1, :hour 23, :minute 58}
+      ;;     {:year 1518, :month 11, :day 2, :hour 0, :minute 40}
+      ;;     {:year 1518, :month 11, :day 2, :hour 0, :minute 50})}
+      ;;   {:id 10,
+      ;;    :timelines
+      ;;    ({:year 1518, :month 11, :day 3, :hour 0, :minute 5}
+      ;;     {:year 1518, :month 11, :day 3, :hour 0, :minute 24}
+      ;;     {:year 1518, :month 11, :day 3, :hour 0, :minute 29})}
+      ;;   {:id 99,
+      ;;    :timelines
+      ;;    ({:year 1518, :month 11, :day 4, :hour 0, :minute 2}
+      ;;     {:year 1518, :month 11, :day 4, :hour 0, :minute 36}
+      ;;     {:year 1518, :month 11, :day 4, :hour 0, :minute 46}
+      ;;     {:year 1518, :month 11, :day 5, :hour 0, :minute 3}
+      ;;     {:year 1518, :month 11, :day 5, :hour 0, :minute 45}
+      ;;     {:year 1518, :month 11, :day 5, :hour 0, :minute 55})})
+       (map #(update % :timelines (fn [x] (map datetime->minute x))))
+      ;;  ({:id 10, :timelines (798890520 798890525 798890545 798890550 798890575)}
+      ;;   {:id 99, :timelines (798891958 798892000 798892010)}
+      ;;   {:id 10, :timelines (798893405 798893424 798893429)}
+      ;;   {:id 99, :timelines (798894842 798894876 798894886 798896283 798896325 798896335)})
        (map (fn [{id :id, timelines :timelines}]
-              {:id id, :diffs (calc-wake-and-sleep id timelines '())}))))
+              (let [diffs (calc-diff-minutes id timelines '())]
+                {:id id, :diffs (diffs->wake-and-sleep diffs)})))))
+      ;; ({:id 10, :diffs ([[0 25] [2 20]] [[1 5] [3 5]])}
+      ;;  {:id 99, :diffs ([[0 10]] [[1 42]])}
+      ;;  {:id 10, :diffs ([[0 5]] [[1 19]])}
+      ;;  {:id 99, :diffs ([[0 10] [2 1397] [4 34]] [[1 42] [3 10]])})
+
+;; diffs 를 인덱스로 분할하려고 함
 
 (comment
   (solve-4-1

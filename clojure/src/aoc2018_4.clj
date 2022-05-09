@@ -113,7 +113,7 @@
 
 
 (defn diffs->wake-and-sleep
-  "diffs 사이의 갭을 짝수 인덱스는 wakes로 홀수는 sleeps로 합산하여 반환"
+  "diffs (25 5 20 5) 같이 사이의 갭을 짝수 인덱스는 wakes로 홀수는 sleeps로 합산하여 반환 {:wakes 45 :sleeps 10}"
   [diffs]
   (let [spitted-diffs (->> diffs
                            (map-indexed vector)

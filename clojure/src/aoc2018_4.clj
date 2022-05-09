@@ -33,28 +33,23 @@
 ;; 파트 1은 “주어진 입력에 대해서, 가장 오랜시간 잠들어있었던 가드의 ID와, 그 가드가 가장 빈번하게 잠들어 있었던 분(minute)의 곱을 구하라”
 ;; 만약 20번 가드가 0시 10분~36분, 다음날 0시 5분~11분, 다다음날 0시 11분~13분 이렇게 잠들어 있었다면, “11분“이 가장 빈번하게 잠들어 있던 ‘분’. 그럼 답은 20 * 11 = 220.
 
-
-;; 파트 2
-;; 주어진 분(minute)에 가장 많이 잠들어 있던 가드의 ID과 그 분(minute)을 곱한 값을 구하라.
-
-;; 함수를 나누는 모범사례 단일 / 다중 항목
-
 (def record-pattern #"\[(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})\]\s(.*)")
-
-(defn parse-record
-  [input]
-  (let [[_ year month day hour minute log] (re-find record-pattern input)]
-    [{:year (read-string year)
-      :month (read-string month)
-      :day (read-string day)
-      :hour (read-string hour)
-      :minute (read-string minute)} log]))
-
-(defn parse-records [inputs] (map parse-record inputs))
-
 (def guard-shift-pattern #"Guard #(\d+) begins shift")
 
-(defn parse-id [log]
+(defn parse-record
+  "[1518-11-01 00:00] x 형식의 레코드를 {:year 0 :month 0 :day 0 :hour 0 :minute 0} 형식으로 파싱"
+  [input]
+  (let [[_ year month day hour minute log] (re-find record-pattern input)]
+    {:log log
+     :datetime {:year (read-string year)
+                :month (read-string month)
+                :day (read-string day)
+                :hour (read-string hour)
+                :minute (read-string minute)}}))
+
+(defn parse-id
+  "Guard #id begins shift 형식 로그에서 id를 파싱"
+  [log]
   (let [matched (last (re-find guard-shift-pattern log))]
     (if (seq matched) (read-string matched) nil)))
 
@@ -63,37 +58,72 @@
   (parse-id "falls asleep"))
 
 (defn set-top
+  "컬렉션 마지막에 원소를 삽입한 새로운 컬랙션을 반환"
   [coll x]
   (conj (pop coll) x))
 
 (defn collapse-records
   [records]
-  (reduce (fn [acc [datetime log]]
+  (reduce (fn [acc {datetime :datetime , log :log}]
             (let [id (parse-id log)]
               #_(println :id id :datetime datetime :log log)
               (match [log]
                 ["falls asleep"] (let [elem (last acc)]
-                                   (conj acc {:id (:id elem) :sleep datetime}))
+                                   (conj acc {:id (:id elem) :timestamp datetime}))
                 ["wakes up"] (let [elem (last acc)]
-                               (conj acc {:id (:id elem) :awake datetime}))
+                               (conj acc {:id (:id elem) :timestamp datetime}))
                 :else (conj acc {:id id
-                                 :awake datetime}))))
+                                 :timestamp datetime}))))
           [] records))
 
 (defn collapse-timelines
   [timeline]
-  (let [timelines' (map #(dissoc % :id) timeline)]
+  (let [timelines' (map (fn [x] (:timestamp x)) timeline)]
     (reduce (fn [_ x]
               {:id (:id x) :timelines timelines'})
             {}
             timeline)))
 
+(defn datetime->minute
+  "{:year 0 :month 0 :day 0 :hour 0 :minute 0} 형식의 맵을 분으로 변환"
+  [{year :year, month :month, day :day, hour :hour, minute :minute}]
+  (+ (* year 525960)
+     (* month 43800)
+     (* day 1440)
+     (* hour 60)
+     minute))
+
+(comment
+  (datetime->minute {:year 1518, :month 11, :day 1, :hour 0, :minute 0}))
+
+(defn calc-wake-and-sleep
+  "timelines 간에 diff 시간을 리스트로 반환"
+  [id timelines diff]
+  (let [curr (first timelines)
+        next (first (next timelines))]
+    (cond
+      (nil? next) diff
+      (seq timelines) (recur id (rest timelines) (conj diff (- next curr)))
+      :else nil)))
+
+(comment
+  ;; 각 시간의 차이 만큼 출력 (25 5 20 5)
+  (calc-wake-and-sleep  10 '(798890520 798890525 798890545 798890550 798890575) '()))
+
+
+;;; WIP
 (defn solve-4-1 [inputs]
   (->> inputs
        (map parse-record)
        collapse-records
        (partition-by :id)
-       (map collapse-timelines)))
+       (map collapse-timelines)
+       (map (fn [x]
+              (let [id (:id x)
+                    timelines (map datetime->minute (:timelines x))]
+                {:id id :timelines timelines})))
+       (map (fn [{id :id, timelines :timelines}]
+              {:id id, :diffs (calc-wake-and-sleep id timelines '())}))))
 
 (comment
   (solve-4-1
@@ -116,5 +146,16 @@
     "[1518-11-05 00:55] wakes up"])
   (solve-4-1 input))
 
+;; 한타
+;; Q1. 함수를 나누는 모범사례 단일 / 다중 항목
+;; A. 단일 인자 함수를 만들고 map 을 쓰는 것을 권장
+;; Q2. collapse-records 처럼 특정 키 값으로 합치는 로직이 지저분
+;; 마지막 원소에서 id를 가져오는 것이 함수형 스럽지 않음. 좀더 함수형다운 접근이 가능하지 않을지?
+;; Q3. frequencies 내에서 persistent! assoc! 같은 최적화 기법이 많이 쓰이는지
+;; A. 현업 수준의 최적화는 보통 hashmap 구조를 바꾸거나 너무 당연한 db query 최적화 정도
+;;    리턴받는 데이터 양이 많아서 비동기가 필요하거나 캐시 처럼 쓸 때는 delay, future 같은 비동기 관련 함수
 
+
+;; 파트 2
+;; 주어진 분(minute)에 가장 많이 잠들어 있던 가드의 ID과 그 분(minute)을 곱한 값을 구하라.
 

@@ -43,10 +43,10 @@
   "폴리머들이 연쇄적으로 반응하여 파괴되고 남은 폴리머들은 반환
    polymers abBA 같은 문자열이 주어지면 '()를 반환"
   [polymers]
-  (let [polyers' (reduce react-single-cycle [] polymers)]
-    (if (= (count polymers) (count polyers'))
-      polyers'
-      (recur polyers'))))
+  (let [polymers' (reduce react-single-cycle [] polymers)]
+    (if (= (count polymers) (count polymers'))
+      polymers'
+      (recur polymers'))))
 
 (defn solve-5-1
   [polymers]
@@ -75,6 +75,8 @@
     (->> polymers
          (filter case-insensitive-matched?)
          (apply str))))
+
+;; 정규식으로 repalce
 
 (defn solve-5-2
   [polymers]

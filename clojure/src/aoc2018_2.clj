@@ -20,11 +20,10 @@
   "문자열 box-id를 받아 2, 3번 반복되는 문자의 카운트를 맵으로 반환 (ex {2 1, 3 1} 2번 1개 3번 1개)"
   [box-id; 박스에 적혀진 문자열
    ]
-  (->> box-id
-       frequencies
-       (group-by val)
-       (#(update-vals % count))
-       (#(select-keys % [2 3]))))
+  (let [char-freq (group-by val (frequencies box-id))]
+    (-> char-freq
+        (#(update-vals % count))
+        (#(select-keys % [2 3])))))
 
 ; 1차 솔루션
 
@@ -35,10 +34,10 @@
   (->> box-ids
        (map twice-n-triple-char-count)
        (filter not-empty)
-       (reduce (fn [m v]
-                 (let [twice (if (v 2) 1 0)
-                       tripe (if (v 3) 1 0)]
-                   (-> m
+       (reduce (fn [acc freq-count-m]
+                 (let [twice (if (get freq-count-m 2) 1 0)
+                       tripe (if (get freq-count-m 3) 1 0)]
+                   (-> acc
                        (update :twice (fn [v] (+ v twice)))
                        (update :triple (fn [v] (+ v tripe))))))
                {:twice 0 :triple 0})

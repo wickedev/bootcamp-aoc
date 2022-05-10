@@ -1,12 +1,8 @@
 (ns aoc2018-1
-  (:require [clojure.java.io :as io]))
+  (:require
+   [utils :refer [read-resource]]))
 
-(def input (-> "day1.sample.txt"
-               (io/resource)
-               (slurp)
-               (clojure.string/split-lines)))
-
-(use 'clojure.tools.trace)
+(def input (read-resource "day1.sample.txt"))
 
 ;; 파트 1
 ;; 주어진 입력의 모든 숫자를 더하시오.

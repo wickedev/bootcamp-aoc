@@ -48,12 +48,6 @@
     (for [x (range x width), y (range y height)]
       {:id id :x x :y y})))
 
-(defn make-fabrics
-  "claim들로 부터 fabric들을 만듭니다."
-  [claims]
-  (map make-fabric claims))
-
-
 (defn collapse-tiles
   "좌표 중복 없이 연관된 id 리스트를 함께 반환합니다. ex) {:x 3, :y 3} (1 2)"
   [tiles]
@@ -79,7 +73,7 @@
   [inputs]
   (->> inputs
        parse-claims
-       make-fabrics
+       (map make-fabric)
        collapse-fabrics
        (filter overlap?)
        count))
@@ -96,7 +90,8 @@
 ;; 겹치지 않는 영역을 가진 ID를 출력하시오. (문제에서 답이 하나만 나옴을 보장함)
 
 (defn ids-from
-  "claim들의 id들을 반환"
+  "claim들의 :id들을 set으로 반환합니다. #{1}
+   claims ({:id 1, :x 1, :y 3, :w 4, :h 4} ...) 형식의 리스트"
   [claims]
   (->> claims
        (map #(get % :id))
@@ -108,14 +103,14 @@
   (->> fabrics
        collapse-fabrics
        (filter overlap?)
-       (map (fn [[_ ids]] ids))
+       (map second)
        (apply concat)
        set))
 
 (defn solve-3-2
   [inputs]
   (let [claims (parse-claims inputs)
-        fabrics (make-fabrics claims)
+        fabrics (map make-fabric claims)
         ids (ids-from claims)
         overlap-ids (overlaped-ids-from fabrics)]
     (first (difference ids overlap-ids))))

@@ -20,8 +20,10 @@
    a a 혹은 a b 는 false, a A 혹은 A a 는 true"
   [c1 c2]
   (let [c1' (int c1)
-        c2' (int c2)]
-    (or (= c1' (+ c2' 32)) (= c1' (- c2' 32)))))
+        c2' (int c2)
+        upper (- c2' 32)
+        lower (+ c2' 32)]
+    (or (= c1' upper) (= c1' lower))))
 
 (defn react-single-cycle
   "한 사이클에 폴리머들이 반응하여 파괴되고 남은 폴리머들을 반환.

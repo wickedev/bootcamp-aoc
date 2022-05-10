@@ -16,14 +16,14 @@
 ;; 주어진 input 에서 최종으로 남는 문자열을 리턴하시오.
 
 (defn polarity?
-  "2개의 문자를 인자로 받아 이 둘이 극성을 가지는지 판단한다
+  "2개의 유닛을 인자로 받아 이 둘이 극성을 가지는지 판단한다
    a a 혹은 a b 는 false, a A 혹은 A a 는 true"
-  [c1 c2]
-  (let [c1' (int c1)
-        c2' (int c2)
-        upper (- c2' 32)
-        lower (+ c2' 32)]
-    (or (= c1' upper) (= c1' lower))))
+  [unit1 unit2]
+  (let [unit1' (int unit1)
+        unit2' (int unit2)
+        upper (- unit2' 32)
+        lower (+ unit2' 32)]
+    (or (= unit1' upper) (= unit1' lower))))
 
 (defn react-single-cycle
   "한 사이클에 폴리머들이 반응하여 파괴되고 남은 폴리머들을 반환.

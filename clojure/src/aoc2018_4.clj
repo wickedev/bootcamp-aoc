@@ -45,6 +45,7 @@
      :shift? shift?
      :guard (when shift? (read-string guard))}))
 
+;; Integer/parseInt 통일
 
 (defn filling-guards
   "raw records ({:minute 0, :shift? true, :guard 10} 

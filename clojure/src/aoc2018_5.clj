@@ -1,6 +1,5 @@
 (ns aoc2018_5
-  (:require [utils :refer [read-resource]]
-            [clojure.string :refer [upper-case]]))
+  (:require [utils :refer [read-resource]]))
 
 (def input (read-resource "aoc2018_5_sample.txt"))
 

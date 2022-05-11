@@ -106,14 +106,14 @@
 (defn closest-reducer
   "{:a 2, :b 7} 형식의 closests 중에
    가장 가까운 것들을 [[:a 4]] 형식으로 반환"
-  [closests next]
-  (let [closest-dist (last (peek closests))
-        next-dist (val next)]
+  [closests curr]
+  (let [closest-dist (peek (peek closests))
+        curr-dist (val curr)]
     (cond
-      (nil? closest-dist) [next]
-      (< closest-dist next-dist) closests
-      (= closest-dist next-dist) (conj closests next)
-      :else [next])))
+      (nil? closest-dist) [curr]
+      (< closest-dist curr-dist) closests
+      (= closest-dist curr-dist) (conj closests curr)
+      :else [curr])))
 
 (defn closests->mark
   "[[:a 4] [:e 4]] 형식의 closests를

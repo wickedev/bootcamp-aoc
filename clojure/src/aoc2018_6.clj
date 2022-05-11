@@ -49,20 +49,6 @@
   [input]
   (let [[x y] (map read-string (string/split input #", "))] {:x x :y y}))
 
-(defn max-in
-  "({} ...) 형식의 맵 시퀀스 중에서 선택된 키의 가장 높은 값을 반환"
-  [maps key]
-  (->> maps
-       (map key)
-       (apply max)))
-
-(defn min-in
-  "({} ...) 형식의 맵 시퀀스 중에서 선택된 키의 가장 낮은 값을 반환"
-  [maps key]
-  (->> maps
-       (map key)
-       (apply min)))
-
 (defn distance-between
   "두 좌표간에 거리를 https://en.wikipedia.org/wiki/Taxicab_geometry를 사용해서 계산"
   [{x1 :x y1 :y} {id :id x2 :x y2 :y}]
@@ -79,10 +65,12 @@
   "({:id a :x 1 :y 1} {:id f :x 8 :y 9}) 형식의
    좌표들(coords) 중 최소 x,y 최대 x,y 를 반환"
   [coords]
-  {:min-x (min-in coords :x)
-   :min-y (min-in coords :y)
-   :max-x (max-in coords :x)
-   :max-y (max-in coords :y)})
+  (let [x-coll (map :x coords)
+        y-coll (map :x coords)]
+    {:min-x (apply min x-coll)
+     :min-y (apply min y-coll)
+     :max-x (apply max x-coll)
+     :max-y (apply max y-coll)}))
 
 (defn generate-finite-grid
   "{:min-x 0 :min-y 0 :max-x 0 :max-y 0}

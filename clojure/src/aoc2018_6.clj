@@ -139,9 +139,9 @@
    {:min-x 0 :min-y 0 :max-x 0 :max-y 0} 형식의 엣지 영역에 맞닿아 있는
     마크들의 (:a, :b :.) 형식으로 반환"
   [{:keys [min-x min-y max-x max-y]} grid]
-  (let [pred-edge (fn [tile]
-                    (let [x (:x tile)
-                          y (:y tile)]
+  (let [pred-edge (fn [location]
+                    (let [x (:x location)
+                          y (:y location)]
                       (or (= x min-x)
                           (= x max-x)
                           (= y min-y)
@@ -152,10 +152,10 @@
          distinct
          set)))
 
-(defn finate-tile?
+(defn finate-location?
   "#{:a :b} 형식의 무한한 마크에 포함하지 않는 유한한 타일을 검사합니다"
-  [infinate-marks tile]
-  (let [closest (:closest tile)]
+  [infinate-marks location]
+  (let [closest (:closest location)]
     (not (contains? infinate-marks closest))))
 
 (defn solve-6-1
@@ -170,7 +170,7 @@
                   (map with-distances)
                   (map with-closest))
         infinate-marks (get-infinate-marks edge-coord grid)
-        finate-erea? (partial finate-tile? infinate-marks)
+        finate-erea? (partial finate-location? infinate-marks)
         finate-ereas (filter finate-erea? grid)
         largest-finate-erea-size (->> finate-ereas
                                       (group-by :closest)
@@ -227,10 +227,10 @@
                               (map :distances)
                               (map vals)
                               (map #(apply + %)))
-        safe-area-count (->> distances-totals
-                             (filter #(> distance-max %))
-                             count)]
-    safe-area-count))
+        safe-locations-size (->> distances-totals
+                                 (filter #(> distance-max %))
+                                 count)]
+    safe-locations-size))
 
 (comment
   (solve-6-2 '("1, 1"

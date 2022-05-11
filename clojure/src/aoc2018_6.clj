@@ -56,6 +56,13 @@
        (map key)
        (apply max)))
 
+(defn min-in
+  "({} ...) 형식의 맵 시퀀스 중에서 선택된 키의 가장 낮은 값을 반환"
+  [maps key]
+  (->> maps
+       (map key)
+       (apply min)))
+
 (defn distance-between
   "두 좌표간에 거리를 https://en.wikipedia.org/wiki/Taxicab_geometry를 사용해서 계산"
   [{x1 :x y1 :y} {id :id x2 :x y2 :y}]
@@ -66,21 +73,28 @@
    {:id a :x 0 :y 0} 형식으로 반환
    id는 0 부터 소문자 알파벳 순서로 진행"
   [idx {x :x y :y}]
-  {:id (char (+ idx 97)) :x x :y y})
+  {:id (keyword (str (char (+ idx 97)))) :x x :y y})
+
+(defn get-edge-coord
+  "({:id a :x 1 :y 1} {:id f :x 8 :y 9}) 형식의
+   좌표들(coords) 중 최소 x,y 최대 x,y 를 반환"
+  [coords]
+  {:min-x (min-in coords :x)
+   :min-y (min-in coords :y)
+   :max-x (max-in coords :x)
+   :max-y (max-in coords :y)})
 
 (defn generate-finite-grid
-  "좌표들 ({:id a :x 1 :y 1} {:id f :x 8 :y 9})
-   중 가장 큰 (x, y)를 끝으로 하는 유한한 그리드를 반환"
-  [coords]
-  (let [max-x (max-in coords :x)
-        max-y (max-in coords :y)]
-    (for [x (range 0 max-x), y (range 0 max-y)]
-      {:x x
-       :y y})))
+  "{:min-x 0 :min-y 0 :max-x 0 :max-y 0}
+   형식의 엣지를 끝으로 하는 유한한 그리드를 반환"
+  [{:keys [min-x min-y max-x max-y]}]
+  (for [y (range min-x (+ max-y 1))
+        x (range min-y (+ max-x 1))]
+    {:x x :y y}))
 
 (defn assoc-distances
-  "한 포인트(point) {:x 0 :y 0} 에 
-   좌표들(coords) ({:id a :x 1 :y 1} {:id f :x 8 :y 9})
+  "{:x 0 :y 0} 형식의 포인트(point)와
+   ({:id a :x 1 :y 1} {:id f :x 8 :y 9})형식의 좌표들(coords)
    간에 거리를 추가하여 반환
    예) {:x 0, :y 0, :distances {a 2, b 7}}"
   [coords point]
@@ -89,16 +103,81 @@
                        (apply conj))]
     (assoc point :distances distances)))
 
+(defn closest-reducer
+  "{:a 2, :b 7} 형식의 closests 중에
+   가장 가까운 것들을 [[:a 4]] 형식으로 반환"
+  [closests next]
+  (let [closest-dist (last (peek closests))
+        next-dist (val next)]
+    (cond
+      (nil? closest-dist) [next]
+      (< closest-dist next-dist) closests
+      (= closest-dist next-dist) (conj closests next)
+      :else [next])))
+
+(defn closests->mark
+  "[[:a 4] [:e 4]] 형식의 closests를
+   :a 와 같은 마크로 변환
+   만약 closests가 두개 이상이라면 :.를 반환"
+  [closests]
+  (if (= (count closests) 1)
+    (first (first closests))
+    :.))
+
+(defn with-closest
+  "{:distances {:a 2, :b 7}} 형식의
+   with-distances 중에 가장 가까운 마크를 찾아
+   {:distances {:a 2, :b 7} :closest :a} 형식으로 변환"
+  [with-distances]
+  (let [closest (->> (:distances with-distances)
+                     (reduce closest-reducer [])
+                     closests->mark)]
+    (assoc with-distances :closest closest)))
+
+(defn get-infinate-marks
+  "({:x 0 :y 0} ...) 형식의 grid 내에서
+   {:min-x 0 :min-y 0 :max-x 0 :max-y 0} 형식의 엣지 영역에 맞닿아 있는
+    마크들의 (:a, :b :.) 형식으로 반환"
+  [{:keys [min-x min-y max-x max-y]} grid]
+  (let [pred-edge (fn [tile]
+                    (let [x (:x tile)
+                          y (:y tile)]
+                      (or (= x min-x)
+                          (= x max-x)
+                          (= y min-y)
+                          (= y max-y))))]
+    (->> grid
+         (filter pred-edge)
+         (map :closest)
+         distinct
+         set)))
+
+(defn finate-tile?
+  "#{:a :b} 형식의 무한한 마크에 포함하지 않는 유한한 타일을 검사합니다"
+  [infinate-marks tile]
+  (let [closest (:closest tile)]
+    (not (contains? infinate-marks closest))))
+
 (defn solve-6-1
   "https://adventofcode.com/2018/day/6 참조"
   [inputs]
   (let [coords (->> inputs
                     (map parse-coordinate)
                     (map-indexed with-id))
+        edge-coord (get-edge-coord coords)
         with-distances (partial assoc-distances coords)
-        grid (->> (generate-finite-grid coords)
-                  (map with-distances))]
-    grid))
+        grid (->> (generate-finite-grid edge-coord)
+                  (map with-distances)
+                  (map with-closest))
+        infinate-marks (get-infinate-marks edge-coord grid)
+        finate-erea? (partial finate-tile? infinate-marks)
+        finate-ereas (filter finate-erea? grid)
+        largest-finate-erea-size (->> finate-ereas
+                                      (group-by :closest)
+                                      vals
+                                      (map count)
+                                      (apply max))]
+    largest-finate-erea-size))
 
 (comment
   (solve-6-1 '("1, 1"
@@ -106,7 +185,8 @@
                "8, 3"
                "3, 4"
                "5, 5"
-               "8, 9")))
+               "8, 9")) ; it should be equal 17
+  (solve-6-1 input))
 
 ;; 파트 2
 ;; 안전(safe) 한 지역은 근원지'들'로부터의 맨하탄거리(Manhattan distance, 격자를 상하좌우로만 움직일때의 최단 거리)의 '합'이 N 미만인 지역임.
@@ -131,3 +211,32 @@
 ;; Total distance: 5 + 6 + 4 + 2 + 3 + 10 = 30
 
 ;; N이 10000 미만인 안전한 지역의 사이즈를 구하시오.
+
+(defn solve-6-2
+  "https://adventofcode.com/2018/day/6#part2 참조"
+  [inputs distance-max]
+  (let [coords (->> inputs
+                    (map parse-coordinate)
+                    (map-indexed with-id))
+        edge-coord (get-edge-coord coords)
+        with-distances (partial assoc-distances coords)
+        grid (->> (generate-finite-grid edge-coord)
+                  (map with-distances)
+                  (map with-closest))
+        distances-totals (->> grid
+                              (map :distances)
+                              (map vals)
+                              (map #(apply + %)))
+        safe-area-count (->> distances-totals
+                             (filter #(> distance-max %))
+                             count)]
+    safe-area-count))
+
+(comment
+  (solve-6-2 '("1, 1"
+               "1, 6"
+               "8, 3"
+               "3, 4"
+               "5, 5"
+               "8, 9") 32) ; it should be equal 16
+  (solve-6-2 input 10000))

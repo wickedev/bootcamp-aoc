@@ -80,7 +80,7 @@
         x (range min-x (inc max-x))]
     {:x x :y y}))
 
-(defn closest-reducer ;generate-closest 
+(defn generate-closest
   "{:a 2, :b 7} 형식의 closests 중에
    가장 가까운 것들을 [[:a 4]] 형식으로 반환"
   [closests curr]
@@ -115,7 +115,7 @@
                        (map distance-between')
                        (apply conj))
         closest (->>  distances
-                      (reduce closest-reducer [])
+                      (reduce generate-closest [])
                       closests->mark)
         {:keys [x y]} location
         edge (or (= x min-x)

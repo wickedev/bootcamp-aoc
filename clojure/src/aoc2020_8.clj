@@ -199,7 +199,7 @@
   [state]
   (or (exit-normal? state) (infinity-loop? state)))
 
-(defn excute-until-infinity-or-end
+(defn excute-until-infinity-or-exit-normal
   "[{:operation :nop, :argument 0} ...] 형식의 instructions을 실행하고
    무한 루프 정상 종료 혹은 정상 종료되면
    {:instructions [{:operation :nop, :argument 0} ...],
@@ -219,7 +219,7 @@
   (->>  inputs
         (map parse-instruction)
         variations-of-fixed-instructions
-        (map excute-until-infinity-or-end)
+        (map excute-until-infinity-or-exit-normal)
         (filter exit-normal?)
         first
         :result))

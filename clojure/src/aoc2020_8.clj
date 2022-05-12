@@ -56,7 +56,7 @@
   "기존 호출한 위치 중에 ptr이 있는지 여부를 검사
    만약 이미 있다면 무한 루프"
   [call-stack ptr]
-  (not (nil? (some #(= ptr %) call-stack))))
+  (boolean (some #(= ptr %) call-stack)))
 
 (defn generate-on-nop
   "nop 연산자일 경우 다음 ptr을 1증가 시킨 뒤 call-stack에 추가
@@ -101,7 +101,7 @@
    "acc" generate-on-acc
    "jmp" generate-on-jmp})
 
-(defn generate-results
+(defn generate-result
   [instructions ctx step]
   (let [call-stack (get ctx :call-stack)
         ptr (or (peek call-stack) 0)
@@ -114,9 +114,9 @@
   "instructions을 누산하여 결과를 {:call-stack [0] :result 0} 형식으로 반환
    만약 무한 루프가 발생한다면 발생하는 다음 ptr과 스탭을 :infinite-loop-at에 추가"
   [instructions]
-  (let [generate-results' (partial generate-results instructions)]
+  (let [generate-result' (partial generate-result instructions)]
     (->> (iterate inc 2)
-         (reduce generate-results' {:call-stack [0]
+         (reduce generate-result' {:call-stack [0]
                                     :result 0}))))
 
 (defn solve-8-1
@@ -202,5 +202,3 @@
                "jmp -4"
                "acc +6"))
   (solve-8-2 inputs))
-
-

@@ -1,7 +1,7 @@
 (ns aoc2018-7
   (:require [utils :refer [read-resource]]))
 
-(def input (read-resource "day2.sample.txt"))
+(def inputs (read-resource "aoc.2018.day3.sample.txt"))
 
 ;; # Day 7
 
@@ -41,7 +41,7 @@
 
 ;; 결과: `CABDFE`
 
-;; instructions [[:C :A], [:C :F], [:A :B}, {:A :D}, {:B :E}, {:D :E}, {:F :E}]
+;; instructions [[:C :A], [:C :F], [:A :B], [:A :D], [:B :E], [:D :E], [:F :E]]
 ;; letters [:A :B :C :D :E :F]
 ;; group-by instructions letters
 ;; {:C [], :A [:C], :F [:C], :B [:A], :D [:A], :E [:B :D :F]}
@@ -56,29 +56,88 @@
 ;; [:C :A :B :D :F] <= {:E []}
 ;; [:C :A :B :D :F :E] <= {}
 
-(comment
-  (def instructions [[:C :A],[:C :F], [:A :B],[:A :D], [:B :E], [:D :E], [:F :E]])
-  (prn instructions)
-  (def letters (->> instructions
-                    (apply concat)
-                    set))
 
+(def instruction-pattern #"Step (\w) must be finished before step (\w) can begin.")
 
-  (def deps (->> instructions
-                 (group-by #(last %))
-                 (reduce
-                  (fn [acc [letter deps]]
-                    (let [deps' (set (apply concat deps))]
-                      (assoc acc letter deps')))
-                  {})))
+(defn parse-instruction
+  "Step C must be finished before step A can begin.
+   형식의 input을 입력 받아 [A C] 형식의 instruction으로 반환"
+  [input]
+  (->> input
+       (re-find instruction-pattern)
+       (drop 1)
+       (mapv seq)
+       (apply concat)))
 
-  (def letter-deps's
+(defn grouping-instructions
+  "[[A C] [A B] [B C]] 형식의 instructions을 입력받아
+   {A #{C B}, B #{C}} 형식으로 그루핑하여 반환"
+  [instructions]
+  (let [letters (->> instructions
+                     (apply concat)
+                     set)
+        generate-deps (fn [acc [letter deps]]
+                        (let [deps' (set (apply concat deps))]
+                          (assoc acc letter (disj deps' letter))))
+        deps (->> instructions
+                  (group-by #(last %))
+                  (reduce generate-deps {}))]
     (merge
      (reduce #(assoc %1 %2 #{}) {} letters)
-     deps))
+     deps)))
 
-  (prn letter-deps's))
+(defn generate-high-priorities
+  "백터 acc와 [A #{C B}] 형식의 requirement를 입력으로 받아
+   requirement의 두번째인 deps가 비었다면 requirement를 acc에 추가"
+  [acc requirement]
+  (let [deps (second requirement)]
+    (cond
+      (empty? deps) (conj acc requirement)
+      :else acc)))
 
+(defn picking-high-priority-requirement
+  "{A #{C}, B #{A}, C #{}} 형식의 requirements 중
+   가장 우선 순위가 높은 requirements 백터를 반환"
+  [requirements]
+  (when (not-empty requirements)
+    (->> requirements
+         (reduce generate-high-priorities []))))
+
+(defn ordering-requirements
+  "{A #{C}, B #{A}, C #{}} 형식의 requirements와
+   스탭 순서를 결과로 받을 빈 백터 ordered-steps를
+   가지는 맵을 입력으로 받아 requirements 중 가장 우선 순위가 높은
+   requirement를 빼내 ordered-steps에 채워 반환"
+  [state]
+  (let [{:keys [requirements ordered-steps]} state
+        letter (->> requirements
+                    picking-high-priority-requirement
+                    (apply min-key #(int (key %)))
+                    first)
+        requirements' (->
+                       requirements
+                       (dissoc letter)
+                       (update-vals #(disj % letter)))
+        ordered-steps' (conj ordered-steps letter)]
+    (-> state
+        (assoc :requirements requirements')
+        (assoc :ordered-steps ordered-steps'))))
+
+(defn solve-7-1 [inputs]
+  (let [requirements (->> inputs
+                          (mapv parse-instruction)
+                          grouping-instructions)] ;; Parsing
+    (->> {:requirements requirements ;; Processing
+          :ordered-steps []}
+         (iterate ordering-requirements)
+
+         (drop-while #(not-empty (:requirements %)))
+         first
+         :ordered-steps ;; Aggregate
+         (apply str))))
+
+(comment
+  (solve-7-1 inputs)) ;; Print
 
 ;; ## 파트 2
 
@@ -111,16 +170,51 @@
 ;; ```
 ;; 15초가 걸리므로 답은 15
 
-;; 0 === [{:C 3 []} {:A 4 [:C]} {:B 9 [:A :C]} {:D 8 [:A :C]} {F: 9 [:C]} {E: 14 [:A :B :C :D :F]}]
-;; 3 === [{:A 1 [:C]} {:B 6 [:A :C]} {:D 5 [:A :C]} {F: 6 [:C]} {E: 11 [:A :B :C :D :F]}]
-;; 4 === [{:B 5 [:A :C]} {:D 4 [:A :C]} {F: 6 [:C]} {E: 10 [:A :B :C :D :F]}]
-;; 9 === [{:D 4 [:A :C]} {F: 6 [:C]} {E: 6 [:A :B :C :D :F]}]
-;; 13 === [{F: 6 [:C]} {E: 2 [:A :B :C :D :F]}]
-;; 19 === [{E: -4 [:A :B :C :D :F]}]
-;; 15 === []
+(defn assign-to-worker
+  [worker]
+  worker)
+
+(defn get-assinable-requirements [requirements size]
+  (->> (range)
+       (take size)
+       (filter #(not (nil? %)))))
+
+(defn do-work
+  [state]
+  (let [{:keys [sec requirements workers]} state
+        assinable-workers (->> workers
+                               (filter nil?)
+                               count)
+        assinable-requirements (->> requirements
+                                    picking-high-priority-requirement
+                                    (take assinable-workers)
+                                    keys)]
+    (prn assinable-requirements)
+    (-> state
+        (assoc :sec (inc sec))
+        (assoc :requirements (apply #(dissoc requirements %) [\C]))
+        (assoc :workers (map assign-to-worker workers)))))
+
+(comment
+  (apply  #(dissoc {\A #{\C}, \B #{\A}, \C #{}, \D #{\A}, \E #{\B \D \F}, \F #{\C}} %) [\C]))
 
 
+(defn solve-7-2 [inputs number-of-workers sec-for-step]
+  (let [requirements (->> inputs
+                          (mapv parse-instruction)
+                          grouping-instructions)] ;; Parsing
+    (->> {:sec 0
+          :requirements requirements
+          :workers (make-array Object number-of-workers)}
+         (iterate do-work)
+         (take 15))))
 
-
-
-;; ((count done)) * 60 + 15
+(comment
+  (solve-7-2 ["Step C must be finished before step A can begin."
+              "Step C must be finished before step F can begin."
+              "Step A must be finished before step B can begin."
+              "Step A must be finished before step D can begin."
+              "Step B must be finished before step E can begin."
+              "Step D must be finished before step E can begin."
+              "Step F must be finished before step E can begin."] 2 0)
+  (solve-7-2 inputs 5 60))

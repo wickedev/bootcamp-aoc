@@ -123,14 +123,15 @@
         (assoc :requirements requirements')
         (assoc :ordered-steps ordered-steps'))))
 
-(defn solve-7-1 [inputs]
+(defn solve-7-1
+  "https://adventofcode.com/2018/day/7 참고"
+  [inputs]
   (let [requirements (->> inputs
                           (mapv parse-instruction)
                           grouping-instructions)] ;; Parsing
     (->> {:requirements requirements ;; Processing
           :ordered-steps []}
          (iterate ordering-requirements)
-
          (drop-while #(not-empty (:requirements %)))
          first
          :ordered-steps ;; Aggregate

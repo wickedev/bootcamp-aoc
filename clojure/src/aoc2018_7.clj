@@ -172,7 +172,8 @@
 ;; ```
 ;; 15초가 걸리므로 답은 15
 
-(defn get-assinable-requirements [requirements workers]
+(defn get-assinable-requirements
+  [requirements workers]
   (let [idle-count (count (filter empty? workers))
         working-workers (->> workers
                              (map first)
@@ -187,21 +188,27 @@
          (take idle-count)
          (map first))))
 
-(defn remove-requirements [requirements, remove-requirements]
+(defn remove-requirements
+  [requirements, remove-requirements]
   (apply dissoc requirements remove-requirements))
 
 (defn remove-done
   [requirements done]
   (update-vals requirements #(difference % (set (map first done)))))
 
-(defn working [worker]
+(defn working
+  [worker]
   (cond
     (empty? worker) []
     (let [remaining (second worker)] (<= remaining 1)) []
     :else [(first worker) (dec (second worker))]))
 
-(defn index-of [pred coll]
-  (first (keep-indexed (fn [idx x] (when (pred x) idx)) coll)))
+(defn index-of
+  [pred coll]
+  (first
+   (keep-indexed
+    (fn [idx x] (when (pred x) idx))
+    coll)))
 
 (defn assign-to-worker
   [letter sec-for-step workers]
@@ -214,7 +221,8 @@
        assignable-idx
        [letter working-times]))))
 
-(defn assign-to-workers [requirements sec-for-step workers]
+(defn assign-to-workers
+  [requirements sec-for-step workers]
   (let [requirement (first requirements)]
     (if
      (empty? requirements) workers
@@ -225,7 +233,9 @@
              sec-for-step
              workers)))))
 
-(defn done? [[_ remaining]] (and (not (nil? remaining)) (<= remaining 1)))
+(defn done?
+  [[_ remaining]]
+  (and (not (nil? remaining)) (<= remaining 1)))
 
 (defn do-work
   [sec-for-step state]
@@ -243,24 +253,26 @@
         (assoc :workers assigned-workers)
         (assoc :done (concat done (mapv first done'))))))
 
-(defn working? [{:keys [workers requirements]}]
-  (or (boolean (some seq workers)) (boolean (seq requirements))))
+(defn working?
+  [{:keys [workers requirements]}]
+  (or (boolean (some seq workers))
+      (boolean (seq requirements))))
 
-(defn solve-7-2 [inputs number-of-workers sec-for-step]
+(defn solve-7-2
+  [inputs number-of-workers sec-for-step]
   (let [requirements (->> inputs
                           (mapv parse-instruction)
-                          grouping-instructions);; Parsing
+                          grouping-instructions) ;; Parsing
         do-work' (partial do-work sec-for-step)]
-
     (->> {:sec 0
           :workers (->> (range)
                         (take number-of-workers)
                         (mapv (fn [_] [])))
           :requirements requirements
           :done '()}
-         (iterate do-work')
+         (iterate do-work') ;; Proccesing
          (take-while working?)
-         last
+         last ;; Aggregate
          :sec)))
 
 (comment

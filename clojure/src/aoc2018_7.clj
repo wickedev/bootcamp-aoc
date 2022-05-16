@@ -1,5 +1,6 @@
 (ns aoc2018-7
-  (:require [utils :refer [read-resource]]))
+  (:require [utils :refer [read-resource]]
+            [clojure.set :refer [difference]]))
 
 (def inputs (read-resource "aoc.2018.day3.sample.txt"))
 
@@ -172,32 +173,51 @@
 ;; 15초가 걸리므로 답은 15
 
 (defn assign-to-worker
-  [worker]
+  [assinable-requirements worker]
   worker)
 
 (defn get-assinable-requirements [requirements size]
-  (->> (range)
+  (->> requirements
+       picking-high-priority-requirement
        (take size)
-       (filter #(not (nil? %)))))
+       (map first)
+       set))
+
+(defn remove-requirements-in [requirements, remove-requirement]
+  (-> (apply dissoc requirements remove-requirement)
+      (update-vals #(difference % (set remove-requirement)))))
+
+(defn working [worker]
+  (cond
+    (empty? worker) []
+    (let [remaining (second worker)] (= remaining 0)) []
+    :else [(first worker) (dec (second worker))]))
+
+(defn assigned-to-worker
+  [requirements worker]
+  (let [requirement (first requirements)]
+    (cond
+      (nil? requirement) []
+      (empty? worker) []
+      :else [])))
 
 (defn do-work
   [state]
   (let [{:keys [sec requirements workers]} state
-        assinable-workers (->> workers
-                               (filter nil?)
+        workers' (map working workers)
+        assinable-workers (->> workers'
+                               (filter empty?)
                                count)
-        assinable-requirements (->> requirements
-                                    picking-high-priority-requirement
-                                    (take assinable-workers)
-                                    keys)]
-    (prn assinable-requirements)
+        assinable-requirements (get-assinable-requirements requirements assinable-workers)
+        requirements' (remove-requirements-in requirements assinable-requirements)
+        assigned-to-worker' (partial assigned-to-worker assinable-requirements)
+        assigned-workers (map-indexed assigned-to-worker' workers')]
     (-> state
         (assoc :sec (inc sec))
-        (assoc :requirements (apply #(dissoc requirements %) [\C]))
-        (assoc :workers (map assign-to-worker workers)))))
+        (assoc :requirements requirements')
+        (assoc :workers assigned-workers))))
 
-(comment
-  (apply  #(dissoc {\A #{\C}, \B #{\A}, \C #{}, \D #{\A}, \E #{\B \D \F}, \F #{\C}} %) [\C]))
+
 
 
 (defn solve-7-2 [inputs number-of-workers sec-for-step]
@@ -206,7 +226,9 @@
                           grouping-instructions)] ;; Parsing
     (->> {:sec 0
           :requirements requirements
-          :workers (make-array Object number-of-workers)}
+          :workers (->> (range)
+                        (take number-of-workers)
+                        (map (fn [_] [])))}
          (iterate do-work)
          (take 15))))
 

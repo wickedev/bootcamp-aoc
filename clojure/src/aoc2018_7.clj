@@ -192,7 +192,7 @@
   [requirements, remove-requirements]
   (apply dissoc requirements remove-requirements))
 
-(defn remove-done
+(defn remove-done-in-deps
   [requirements done]
   (update-vals requirements #(difference % (set done))))
 
@@ -253,7 +253,7 @@
                    (map first))
         requirements'  (-> requirements
                            (remove-requirements assinable-requirements)
-                           (remove-done done'))]
+                           (remove-done-in-deps done'))]
     (-> state
         (assoc :sec (inc sec))
         (assoc :requirements requirements')

@@ -2,7 +2,7 @@
   (:require [utils :refer [read-resource]]
             [clojure.set :refer [difference]]))
 
-(def inputs (read-resource "aoc.2018.day3.sample.txt"))
+(def inputs (read-resource "aoc.2018.day7.sample.txt"))
 
 ;; # Day 7
 
@@ -172,65 +172,96 @@
 ;; ```
 ;; 15초가 걸리므로 답은 15
 
-(defn assign-to-worker
-  [assinable-requirements worker]
-  worker)
+(defn get-assinable-requirements [requirements workers]
+  (let [idle-count (count (filter empty? workers))
+        working-workers (->> workers
+                             (map first)
+                             (filter #(not (nil? %)))
+                             set)
+        none-working-requirements (apply
+                                   dissoc
+                                   requirements
+                                   working-workers)]
+    (->> none-working-requirements
+         picking-high-priority-requirement
+         (take idle-count)
+         (map first))))
 
-(defn get-assinable-requirements [requirements size]
-  (->> requirements
-       picking-high-priority-requirement
-       (take size)
-       (map first)
-       set))
+(defn remove-requirements [requirements, remove-requirements]
+  (apply dissoc requirements remove-requirements))
 
-(defn remove-requirements-in [requirements, remove-requirement]
-  (-> (apply dissoc requirements remove-requirement)
-      (update-vals #(difference % (set remove-requirement)))))
+(defn remove-done
+  [requirements done]
+  (update-vals requirements #(difference % (set (map first done)))))
 
 (defn working [worker]
   (cond
     (empty? worker) []
-    (let [remaining (second worker)] (= remaining 0)) []
+    (let [remaining (second worker)] (<= remaining 1)) []
     :else [(first worker) (dec (second worker))]))
 
-(defn assigned-to-worker
-  [requirements worker]
+(defn index-of [pred coll]
+  (first (keep-indexed (fn [idx x] (when (pred x) idx)) coll)))
+
+(defn assign-to-worker
+  [letter sec-for-step workers]
+  (let [assignable-idx (index-of empty? workers)
+        working-times (- (int letter) (- 64 sec-for-step))]
+    (if (nil? assignable-idx)
+      workers
+      (assoc
+       workers
+       assignable-idx
+       [letter working-times]))))
+
+(defn assign-to-workers [requirements sec-for-step workers]
   (let [requirement (first requirements)]
-    (cond
-      (nil? requirement) []
-      (empty? worker) []
-      :else [])))
+    (if
+     (empty? requirements) workers
+     (recur (rest requirements)
+            sec-for-step
+            (assign-to-worker
+             requirement
+             sec-for-step
+             workers)))))
+
+(defn done? [[_ remaining]] (and (not (nil? remaining)) (<= remaining 1)))
 
 (defn do-work
-  [state]
-  (let [{:keys [sec requirements workers]} state
-        workers' (map working workers)
-        assinable-workers (->> workers'
-                               (filter empty?)
-                               count)
-        assinable-requirements (get-assinable-requirements requirements assinable-workers)
-        requirements' (remove-requirements-in requirements assinable-requirements)
-        assigned-to-worker' (partial assigned-to-worker assinable-requirements)
-        assigned-workers (map-indexed assigned-to-worker' workers')]
+  [sec-for-step state]
+  (let [{:keys [sec requirements workers done]} state
+        workers' (mapv working workers)
+        assinable-requirements (get-assinable-requirements requirements workers')
+        assigned-workers (assign-to-workers assinable-requirements sec-for-step workers')
+        done' (filter done? assigned-workers)
+        requirements'  (-> requirements
+                           (remove-requirements  assinable-requirements)
+                           (remove-done  done'))]
     (-> state
         (assoc :sec (inc sec))
         (assoc :requirements requirements')
-        (assoc :workers assigned-workers))))
+        (assoc :workers assigned-workers)
+        (assoc :done (concat done (mapv first done'))))))
 
-
-
+(defn working? [{:keys [workers requirements]}]
+  (or (boolean (some seq workers)) (boolean (seq requirements))))
 
 (defn solve-7-2 [inputs number-of-workers sec-for-step]
   (let [requirements (->> inputs
                           (mapv parse-instruction)
-                          grouping-instructions)] ;; Parsing
+                          grouping-instructions);; Parsing
+        do-work' (partial do-work sec-for-step)]
+
     (->> {:sec 0
-          :requirements requirements
           :workers (->> (range)
                         (take number-of-workers)
-                        (map (fn [_] [])))}
-         (iterate do-work)
-         (take 15))))
+                        (mapv (fn [_] [])))
+          :requirements requirements
+          :done '()}
+         (iterate do-work')
+         (take-while working?)
+         last
+         :sec)))
 
 (comment
   (solve-7-2 ["Step C must be finished before step A can begin."

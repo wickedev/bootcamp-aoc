@@ -210,7 +210,7 @@
     (fn [idx x] (when (pred x) idx))
     coll)))
 
-(defn assign-to-worker
+(defn assign-to-first-idle-worker
   [letter sec-for-step workers]
   (let [assignable-idx (index-of empty? workers)
         working-times (- (int letter) (- 64 sec-for-step))]
@@ -221,14 +221,14 @@
        assignable-idx
        [letter working-times]))))
 
-(defn assign-to-workers
+(defn assign-to-idle-workers
   [requirements sec-for-step workers]
   (let [requirement (first requirements)]
     (if
      (empty? requirements) workers
      (recur (rest requirements)
             sec-for-step
-            (assign-to-worker
+            (assign-to-first-idle-worker
              requirement
              sec-for-step
              workers)))))
@@ -244,7 +244,7 @@
         assinable-requirements (get-assinable-requirements
                                 requirements
                                 workers')
-        assigned-workers (assign-to-workers
+        assigned-workers (assign-to-idle-workers
                           assinable-requirements
                           sec-for-step
                           workers')

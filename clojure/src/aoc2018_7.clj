@@ -194,7 +194,7 @@
 
 (defn remove-done
   [requirements done]
-  (update-vals requirements #(difference % (set (map first done)))))
+  (update-vals requirements #(difference % (set done))))
 
 (defn working
   [worker]
@@ -241,17 +241,24 @@
   [sec-for-step state]
   (let [{:keys [sec requirements workers done]} state
         workers' (mapv working workers)
-        assinable-requirements (get-assinable-requirements requirements workers')
-        assigned-workers (assign-to-workers assinable-requirements sec-for-step workers')
-        done' (filter done? assigned-workers)
+        assinable-requirements (get-assinable-requirements
+                                requirements
+                                workers')
+        assigned-workers (assign-to-workers
+                          assinable-requirements
+                          sec-for-step
+                          workers')
+        done' (->> assigned-workers
+                   (filter done?)
+                   (map first))
         requirements'  (-> requirements
-                           (remove-requirements  assinable-requirements)
-                           (remove-done  done'))]
+                           (remove-requirements assinable-requirements)
+                           (remove-done done'))]
     (-> state
         (assoc :sec (inc sec))
         (assoc :requirements requirements')
         (assoc :workers assigned-workers)
-        (assoc :done (concat done (mapv first done'))))))
+        (assoc :done (concat done done')))))
 
 (defn working?
   [{:keys [workers requirements]}]

@@ -40,24 +40,6 @@
 ;; - F가 수행됨
 ;; - E가 수행됨 (E는 B, D, F 모두가 선행되어야 수행될 수 있음)
 
-;; 결과: `CABDFE`
-
-;; instructions [[:C :A], [:C :F], [:A :B], [:A :D], [:B :E], [:D :E], [:F :E]]
-;; letters [:A :B :C :D :E :F]
-;; group-by instructions letters
-;; {:C [], :A [:C], :F [:C], :B [:A], :D [:A], :E [:B :D :F]}
-;; flatten-deps
-;; {:C [], :A [:C], :F [:C], :B [:A :C], :D [:A :C], :E [:A :B :C :D :F]} **** (part 2)
-;; reduce generate-steps
-;; [] <= {:C [], :A [:C], :F [:C], :B [:A :C], :D [:A :C], :E [:A :B :C :D :F]}
-;; [:C] <= {:A [], :F [], :B [:A], :D [:A], :E [:A :B :D :F]}
-;; [:C :A] <= {:F [], :B [], :D [], :E [:B :D :F]}
-;; [:C :A :B] <= {:F [], :D [], :E [:D :F]}
-;; [:C :A :B :D] <= {:F [], :E [:F]}
-;; [:C :A :B :D :F] <= {:E []}
-;; [:C :A :B :D :F :E] <= {}
-
-
 (def instruction-pattern #"Step (\w) must be finished before step (\w) can begin.")
 
 (defn parse-instruction
@@ -67,12 +49,11 @@
   (->> input
        (re-find instruction-pattern)
        (drop 1)
-       (mapv seq)
        (apply concat)))
 
 (defn grouping-instructions
   "[[A C] [A B] [B C]] 형식의 instructions을 입력받아
-   {A #{C B}, B #{C}} 형식으로 그루핑하여 반환"
+   {A #{C B}, B #{C}, C #{}} 형식으로 그루핑하여 반환"
   [instructions]
   (let [letters (->> instructions
                      (apply concat)
@@ -96,7 +77,7 @@
       (empty? deps) (conj acc requirement)
       :else acc)))
 
-(defn picking-high-priority-requirement
+(defn picking-high-priority-requirements
   "{A #{C}, B #{A}, C #{}} 형식의 requirements 중
    가장 우선 순위가 높은 requirements 백터를 반환"
   [requirements]
@@ -104,7 +85,7 @@
     (->> requirements
          (reduce generate-high-priorities []))))
 
-(defn ordering-requirements
+(defn order-requirements
   "{A #{C}, B #{A}, C #{}} 형식의 requirements와
    스탭 순서를 결과로 받을 빈 백터 ordered-steps를
    가지는 맵을 입력으로 받아 requirements 중 가장 우선 순위가 높은
@@ -112,13 +93,12 @@
   [state]
   (let [{:keys [requirements ordered-steps]} state
         letter (->> requirements
-                    picking-high-priority-requirement
+                    picking-high-priority-requirements
                     (apply min-key #(int (key %)))
                     first)
-        requirements' (->
-                       requirements
-                       (dissoc letter)
-                       (update-vals #(disj % letter)))
+        requirements' (-> requirements
+                          (dissoc letter)
+                          (update-vals #(disj % letter)))
         ordered-steps' (conj ordered-steps letter)]
     (-> state
         (assoc :requirements requirements')
@@ -128,17 +108,24 @@
   "https://adventofcode.com/2018/day/7 참고"
   [inputs]
   (let [requirements (->> inputs
-                          (mapv parse-instruction)
+                          (map parse-instruction)
                           grouping-instructions)] ;; Parsing
     (->> {:requirements requirements ;; Processing
           :ordered-steps []}
-         (iterate ordering-requirements)
+         (iterate order-requirements)
          (drop-while #(not-empty (:requirements %)))
          first
          :ordered-steps ;; Aggregate
          (apply str))))
 
 (comment
+  (solve-7-1 ["Step C must be finished before step A can begin."
+              "Step C must be finished before step F can begin."
+              "Step A must be finished before step B can begin."
+              "Step A must be finished before step D can begin."
+              "Step B must be finished before step E can begin."
+              "Step D must be finished before step E can begin."
+              "Step F must be finished before step E can begin."])
   (solve-7-1 inputs)) ;; Print
 
 ;; ## 파트 2
@@ -173,45 +160,55 @@
 ;; 15초가 걸리므로 답은 15
 
 (defn get-assinable-requirements
+  "{A #{C B}, B #{C}, C #{}} 형식의 requirements와
+   [[C 3] []] 형식의 workers를 입력으로 받아
+   requirements 중 workers가 수행중인 작업은 제외하고
+   그 중 가장 우선 순위가 높은 작업들을 유휴 workers 갯수 만큼 반환"
   [requirements workers]
   (let [idle-count (count (filter empty? workers))
-        working-workers (->> workers
-                             (map first)
-                             (filter #(not (nil? %)))
-                             set)
+        working-requirements (->> workers
+                                  (map first)
+                                  (filter #(not (nil? %)))
+                                  set)
         none-working-requirements (apply
                                    dissoc
                                    requirements
-                                   working-workers)]
+                                   working-requirements)]
     (->> none-working-requirements
-         picking-high-priority-requirement
+         picking-high-priority-requirements
          (take idle-count)
          (map first))))
 
-(defn remove-requirements
-  [requirements, remove-requirements]
-  (apply dissoc requirements remove-requirements))
-
-(defn remove-done-in-deps
-  [requirements done]
-  (update-vals requirements #(difference % (set done))))
+(defn remove-done-in-completes
+  "{A #{C B}, B #{C}, C #{}} 형식의 requirements와
+   [C B] 형식의 completes를 입력으로 받아
+   requirements 내 second인 deps들에서 완료된 completes 제거"
+  [requirements completes]
+  (update-vals requirements #(difference % (set completes))))
 
 (defn working
-  [worker]
+  "[C 3] 형식의 worker를 입력으로 받아
+   작업을 수행한 것으로 간주해 remaining 1 줄임"
+  [[letter remaining]]
   (cond
-    (empty? worker) []
-    (let [remaining (second worker)] (<= remaining 1)) []
-    :else [(first worker) (dec (second worker))]))
+    (nil? letter) []
+    (<= remaining 1) []
+    :else [letter (dec remaining)]))
 
 (defn index-of
+  "coll내 pred 조건에 맞는 첫번째 인덱스를 반환"
   [pred coll]
   (first
    (keep-indexed
     (fn [idx x] (when (pred x) idx))
     coll)))
 
-(defn assign-to-first-idle-worker
-  [letter sec-for-step workers]
+(defn assign-to-idle-workers
+  "각 step을 수행하는데 추가되는 초 sec-for-step,
+   [[C 3] []] 형식의 workers,
+   캐릭터 형식인 할당할 letter를 입력 받아
+   workers 중 가장 앞쪽의 유휴 worker에 letter를 할당"
+  [sec-for-step workers letter]
   (let [assignable-idx (index-of empty? workers)
         working-times (- (int letter) (- 64 sec-for-step))]
     (if (nil? assignable-idx)
@@ -221,62 +218,63 @@
        assignable-idx
        [letter working-times]))))
 
-(defn assign-to-idle-workers
-  [requirements sec-for-step workers]
-  (let [requirement (first requirements)]
-    (if
-     (empty? requirements) workers
-     (recur (rest requirements)
-            sec-for-step
-            (assign-to-first-idle-worker
-             requirement
-             sec-for-step
-             workers)))))
-
-(defn done?
+(defn complete?
+  "[C 3] 형식의 work의 남은 시간인
+   remaining이 1 이하면 완료된 것으로 간주"
   [[_ remaining]]
   (and (not (nil? remaining)) (<= remaining 1)))
 
 (defn do-work
+  "각 step을 수행하는데 추가되는 초 sec-for-step과
+   {sec: 0 :workers: [[] []] :requirements {A #{C B}, B #{C}, C #{}}, completes: ()}
+   형식의 state를 입력으로 받아 한 사이클에 수행되는 작업을 시뮬레이션하고 그 결과 state를 반환"
   [sec-for-step state]
-  (let [{:keys [sec requirements workers done]} state
+  (let [{:keys [sec requirements workers completes]} state
         workers' (mapv working workers)
         assinable-requirements (get-assinable-requirements
                                 requirements
                                 workers')
-        assigned-workers (assign-to-idle-workers
-                          assinable-requirements
-                          sec-for-step
-                          workers')
-        done' (->> assigned-workers
-                   (filter done?)
-                   (map first))
-        requirements'  (-> requirements
-                           (remove-requirements assinable-requirements)
-                           (remove-done-in-deps done'))]
+        assign-to-idle-workers' (partial
+                                 assign-to-idle-workers
+                                 sec-for-step)
+        assigned-workers (reduce
+                          assign-to-idle-workers'
+                          workers'
+                          assinable-requirements)
+        completes' (->> assigned-workers
+                        (filter complete?)
+                        (map first))
+        requirements' (-> requirements
+                          (#(apply dissoc % assinable-requirements))
+                          (remove-done-in-completes completes'))]
     (-> state
         (assoc :sec (inc sec))
         (assoc :requirements requirements')
         (assoc :workers assigned-workers)
-        (assoc :done (concat done done')))))
+        (assoc :completes (concat completes completes')))))
 
 (defn working?
+  "[[C 3] []] 형식의 workers와
+   {A #{C B}, B #{C}, C #{}} 형식의 requirements를
+   입력으로 받아 workers 내 작업이 진행 중 이거나
+   requirements가 남아있을 경우 작업중으로 간주"
   [{:keys [workers requirements]}]
   (or (boolean (some seq workers))
       (boolean (seq requirements))))
 
 (defn solve-7-2
+  "https://adventofcode.com/2018/day/7#part2 참조
+   number-of-workers는 동시 수행할 수 있는 워커의 숫자
+   sec-for-step는 각 스탭이 기본적으로 수행하는데 걸리는 초"
   [inputs number-of-workers sec-for-step]
   (let [requirements (->> inputs
-                          (mapv parse-instruction)
+                          (map parse-instruction)
                           grouping-instructions) ;; Parsing
         do-work' (partial do-work sec-for-step)]
     (->> {:sec 0
-          :workers (->> (range)
-                        (take number-of-workers)
-                        (mapv (fn [_] [])))
+          :workers (repeat number-of-workers [])
           :requirements requirements
-          :done '()}
+          :completes '()}
          (iterate do-work') ;; Proccesing
          (take-while working?)
          last ;; Aggregate

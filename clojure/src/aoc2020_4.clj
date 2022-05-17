@@ -139,12 +139,13 @@
    그렇지 않은 경우 거짓을 반환"
   [s]
   (let [[_ height unit] (re-find #"^(\d+)(in|cm)?$" s)]
-    (when (not (nil? height))
+    (if (some? height)
       (let [size (Integer/parseInt height)]
         (match [size unit]
           [(true :<< #(<= 150 % 193)) "cm"] true
           [(true :<< #(<= 59 % 76)) "in"] true
-          :else false)))))
+          :else false))
+      false)))
 
 (s/def :strict-passport/byr (s/and some? string? #(<= 1920 (Integer/parseInt %) 2002)))
 

@@ -153,13 +153,13 @@
 
 (s/def :strict-passport/eyr (s/and some? string? #(<= 2020 (Integer/parseInt %) 2030)))
 
-(s/def :strict-passport/hgt (s/and some? string? valid-height?))
+(s/def :strict-passport/hgt valid-height?)
 
-(s/def :strict-passport/hcl (s/and some? string? #(re-matches #"^#[0-9a-f]{6}$" %)))
+(s/def :strict-passport/hcl #(re-matches #"^#[0-9a-f]{6}$" %))
 
-(s/def :strict-passport/ecl (s/and some? string? #{"amb" "blu" "brn" "gry" "grn" "hzl" "oth"}))
+(s/def :strict-passport/ecl #{"amb" "blu" "brn" "gry" "grn" "hzl" "oth"})
 
-(s/def :strict-passport/pid (s/and some? string? #(re-matches #"^\d{9}$" %)))
+(s/def :strict-passport/pid #(re-matches #"^\d{9}$" %))
 
 (s/def :strict-passport/cid (constantly true))
 

@@ -74,14 +74,14 @@
 
 (s/def :simple-passport/cid some?)
 
-(s/def ::questionable-passport (s/keys :req-un [:passport/byr
-                                                :passport/iyr
-                                                :passport/eyr
-                                                :passport/hgt
-                                                :passport/hcl
-                                                :passport/ecl
-                                                :passport/pid]
-                                       :opt-un [:passport/cid]))
+(s/def ::questionable-passport (s/keys :req-un [:simple-passport/byr
+                                                :simple-passport/iyr
+                                                :simple-passport/eyr
+                                                :simple-passport/hgt
+                                                :simple-passport/hcl
+                                                :simple-passport/ecl
+                                                :simple-passport/pid]
+                                       :opt-un [:simple-passport/cid]))
 
 (defn solve-4-1 [inputs]
   (->> inputs

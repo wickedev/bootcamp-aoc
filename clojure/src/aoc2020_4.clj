@@ -49,7 +49,7 @@
 
 (def passport-data-pattern #"([^\s\n]+):([^\s\n]+)")
 
-(defn parse-passport 
+(defn parse-passport
   ":로 구분된 \"ecl:gry pid:860033327\" 배치 파일을 읽어서
    {:ecl \"gry\", :pid \"860033327\"} 형식으로 반환"
   [batch-file]
@@ -138,13 +138,13 @@
    in인 경우 59 에서 76 사이인 경우 참
    그렇지 않은 경우 거짓을 반환"
   [s]
-  (let [[_ height unit] (re-find #"^(\d+)(in|cm)?$" s)
-        size (Integer/parseInt height)]
+  (let [[_ height unit] (re-find #"^(\d+)(in|cm)?$" s)]
     (when (not (nil? height))
-      (match [size unit]
-        [(true :<< #(<= 150 % 193)) "cm"] true
-        [(true :<< #(<= 59 % 76)) "in"] true
-        :else false))))
+      (let [size (Integer/parseInt height)]
+        (match [size unit]
+          [(true :<< #(<= 150 % 193)) "cm"] true
+          [(true :<< #(<= 59 % 76)) "in"] true
+          :else false)))))
 
 (s/def :strict-passport/byr (s/and some? string? #(<= 1920 (Integer/parseInt %) 2002)))
 

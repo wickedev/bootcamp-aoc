@@ -4,3 +4,4 @@ clojure/clojure.iml
 .clj-kondo
 .lsp
 clojure/.calva
+.calva

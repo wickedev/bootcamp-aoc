@@ -38,8 +38,6 @@
        (map read-string)
        (zipmap [:id :x :y :w :h])))
 
-(defn parse-claims [claims] (map parse-claim claims))
-
 (defn make-fabric
   "claim으로 부터 fabric을 만듭니다."
   [{:keys [id x y w h]}]
@@ -72,7 +70,7 @@
 (defn solve-3-1
   [inputs]
   (->> inputs
-       parse-claims
+       (map parse-claim claims)
        (map make-fabric)
        collapse-fabrics
        (filter overlap?)
@@ -109,7 +107,7 @@
 
 (defn solve-3-2
   [inputs]
-  (let [claims (parse-claims inputs)
+  (let [claims (map parse-claim inputs)
         fabrics (map make-fabric claims)
         ids (ids-from claims)
         overlap-ids (overlaped-ids-from fabrics)]

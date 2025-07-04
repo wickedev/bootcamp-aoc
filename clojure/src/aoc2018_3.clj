@@ -70,7 +70,7 @@
 (defn solve-3-1
   [inputs]
   (->> inputs
-       (map parse-claim claims)
+       (map parse-claim)
        (map make-fabric)
        collapse-fabrics
        (filter overlap?)

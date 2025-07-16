@@ -59,7 +59,6 @@
   "raw record ({:minute 0, :shift? true, :guard 10}...)를
    {:guard 10, :minutes (0 5 25), :sleep-ranges ((5 25)), :sleep 20} 형식으로 반환"
   [raw-record]
-  (println raw-record)
   (let [sleep-ranges (->>  raw-record
                            (filter (fn [x] (not (:shift? x))))
                            (map :minute)
@@ -101,7 +100,6 @@
   "정리한 기록 ({:total-sleep ...}) 중에 가장 많이 잔 guard의 기록을 반환
    {:guard 10, :minutes (0 5 25), :sleep-ranges ((5 25)), :sleep 20}"
   [sumaries]
-  (println sumaries)
   (->> sumaries
        (sort-by :sleep >)
        first))
@@ -127,7 +125,6 @@
         sleep-ranges (:sleep-ranges sleepiest-guard)
         sleepiest-guard-id (:guard sleepiest-guard)
         sleepiest-minute (first (sleepiest-minute-in sleep-ranges))]
-    (println sumaries)
     (* sleepiest-guard-id sleepiest-minute)))
 
 (comment

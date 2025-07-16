@@ -50,7 +50,7 @@
   [input]
   (let [[_ operation argument] (re-find instruction-pattern input)]
     {:operation (keyword operation)
-     :argument (Integer/parseInt argument)}))
+     :argument (parse-long argument)}))
 
 (defn infinity-loop?
   "{:instructions [{:operation :nop, :argument 0} ...],

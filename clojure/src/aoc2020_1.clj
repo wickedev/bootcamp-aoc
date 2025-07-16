@@ -27,7 +27,7 @@
        (#(combo/combinations % 2)) ; Processing
        (filter (partial sum-eq? expect))
        (apply concat) ; Aggregate
-       (reduce *)))
+       (apply *)))
 
 (comment
   (solve-1-1 ["1721"
@@ -52,7 +52,7 @@
        (#(combo/combinations % 3)) ; Processing
        (filter (partial sum-eq? expect))
        (apply concat) ; Aggregate
-       (reduce *)))
+       (apply *)))
 
 (comment
   (solve-1-2 ["1721"

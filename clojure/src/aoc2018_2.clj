@@ -152,7 +152,6 @@
   (let [curr (first box-ids)
         common-letters (intersection box-id curr)
         matched? (= (count common-letters) (- (count box-id) tolerance))]
-    #_(println :common-letter-for-box-id :box-id box-id :box-ids box-ids :next-box-id curr :common common-letters)
     (cond
       matched? common-letters
       (seq (rest box-ids)) (recur box-id (rest box-ids) tolerance)
@@ -170,8 +169,6 @@
                                      "wvxyz"] 1) ; nil
   )
 
-(println "h")
-
 (defn common-letter-between-box-ids
   "box-ids 간에 첫번째 공통 문자열를 반환합니다. 공통 문자가 없다면 nil을 반환합니다."
   [box-ids; 박스 ID들
@@ -180,7 +177,6 @@
   (let [curr (first box-ids)
         rest-box-ids (rest box-ids)
         common-letters (common-letter-for-box-id curr rest-box-ids tolerance)]
-    #_(println :common-letter-between-box-ids :curr curr :next-box-id rest-box-ids :common common-letters)
     (cond
       (nil? (next rest-box-ids)) nil
       (nil? common-letters) (recur rest-box-ids tolerance)

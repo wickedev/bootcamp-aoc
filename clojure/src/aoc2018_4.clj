@@ -41,9 +41,9 @@
   [input]
   (let [[_ minute guard] (re-find record-pattern input)
         shift? (not (nil? guard))]
-    {:minute (Integer/parseInt minute)
+    {:minute (parse-long minute)
      :shift? shift?
-     :guard (when shift? (Integer/parseInt guard))}))
+     :guard (when shift? (parse-long guard))}))
 
 (defn filling-guards
   "raw records ({:minute 0, :shift? true, :guard 10} 

@@ -48,7 +48,7 @@
    expect는 세 숫자를 더해서 일치하려고 하려는 정수"
   [inputs expect]
   (->> inputs
-       (map #(Integer/parseInt %)) ; Parse
+       (map parse-long) ; Parse
        (#(combo/combinations % 3)) ; Processing
        (filter (partial sum-eq? expect))
        (apply concat) ; Aggregate
